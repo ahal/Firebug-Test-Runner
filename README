@@ -1,0 +1,17 @@
+== Firebug Test Runner ==
+
+These scripts were created to integrate the Firebug unit tests into the Mozilla build system.  There are two distinct scripts, one for downloading the latest Firebug and FBTest extensions and storing them on a local server; one for running the tests from the local server.
+
+= fb-update.py =
+
+This script figures out which versions of Firebug to download by examining the "http://getfirebug.com/releases/firebug/test-bot.config" file.  It can be run on a daily or weekly basis to ensure we always have the latest versions of Firebug.
+
+It will first download the specified firebug and fbtest extensions.  It will then checkout the actual test files from the specified revision in SVN and host them on a local webserver.
+
+= fb-run.py =
+
+Note: This script requires mozrunner (see "http://mikeal.github.com/mozrunner/")
+
+This script looks at the version item in the "fb-test-runner.config" file.  It will see if the specified extensions exist in the current directory and use mozrunner to install them if they do.
+
+It will then run the tests using the -runFBTests command line argument to Firefox.
