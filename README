@@ -4,6 +4,8 @@ These scripts were created to integrate the Firebug unit tests into the Mozilla 
 
 = fb-update.py =
 
+Note: If the local webserver resides somewhere in the root directory, this script must be run with root privileges.
+
 This script figures out which versions of Firebug to download by examining the "http://getfirebug.com/releases/firebug/test-bot.config" file.  It can be run on a daily or weekly basis to ensure we always have the latest versions of Firebug.
 
 It will first download the specified firebug and fbtest extensions.  It will then checkout the actual test files from the specified revision in SVN and host them on a local webserver.
