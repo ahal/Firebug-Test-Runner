@@ -2,18 +2,32 @@
 
 These scripts were created to integrate the Firebug unit tests into the Mozilla build system.  There are two distinct scripts, one for downloading the latest Firebug and FBTest extensions and storing them on a local server; one for running the tests from the local server.
 
+
 = fb-update.py =
 
 Note: If the local webserver resides somewhere in the root directory, this script must be run with root privileges.
 
-This script figures out which versions of Firebug to download by examining the "http://getfirebug.com/releases/firebug/test-bot.config" file.  It can be run on a daily or weekly basis to ensure we always have the latest versions of Firebug.
+This script figures out which versions of Firebug to download by examining the "http://getfirebug.com/releases/firebug/test-bot.config" file.  It can be run on a daily or weekly basis to ensure we always have the latest versions of Firebug.  It will first download the specified firebug and fbtest extensions.  It will then checkout the actual test files from the specified revision in SVN and host them on a local webserver.
 
-It will first download the specified firebug and fbtest extensions.  It will then checkout the actual test files from the specified revision in SVN and host them on a local webserver.
 
 = fb-run.py =
 
 Note: This script requires mozrunner (see "http://mikeal.github.com/mozrunner/")
 
-This script looks at the version item in the "fb-test-runner.config" file.  It will see if the specified extensions exist in the current directory and use mozrunner to install them if they do.
+This script looks at the version item in the "fb-test-runner.config" file.  It will see if the specified extensions exist on the local webserver and use mozrunner to install them if they do.
+It will then run the tests using the -runFBTests command line argument to Firefox.  For the moment, the profile configuration variable must be set to Firefox's default profile.
 
-It will then run the tests using the -runFBTests command line argument to Firefox.
+
+= Server Configuration =
+
+We need to host the test files on a local webserver to ensure they are run in the proper context (and to avoid depending on "http://getfirebug.com", an external server).  To configure the server do:
+1. sudo apt-get install apache2						# Install apache
+2. sudo apt-get install php5						# Install php
+3. sudo a2enmod rewrite				    			# Enable mod_rewrite (for .htaccess)
+4. sudo gedit /etc/apache2/sites-available/default  			# Look for DocumentRoot (it's usually '/var/www' by default)
+5. Under '<Directory $DocumentRoot>' change 'AllowOveride' to 'All'
+6. sudo /etc/init.d/apache2 restart					# Restart the server
+7. sudo rm $DocumentRoot/index.html	     	    			# Delete the auto-generated index file
+
+That's it!  You can create your own directory heirarchy for fbtest root (i.e /var/www/fbtests).  Don't forget to set this location in 'fb-test-runner.config' under [update]->serverpath.
+
