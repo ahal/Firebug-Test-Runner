@@ -27,11 +27,12 @@ test_bot = ConfigParser()
 test_bot.read(os.getcwd() + "/test-bot.config")
 # For each section in the config file, download the specified files and move them to the webserver
 for section in test_bot.sections():
+    print "svn co http://fbug.googlecode.com/svn/tests/" + " " + os.getcwd() + "/" + section.lower() + "/tests -r " + test_bot.get(section, "SVN_REVISION")
     if not os.path.isdir(os.path.curdir + section + "/.svn"):
-        os.system("svn co " + " http://fbug.googlecode.com/svn/tests/" + " " + os.getcwd() + "/" + section.lower() + "/tests -r " + test_bot.get(section, "SVN_REVISION"))
+        os.system("svn co http://fbug.googlecode.com/svn/tests/" + " " + os.getcwd() + "/" + section.lower() + "/tests -r " + test_bot.get(section, "SVN_REVISION"))
     else:
         os.system(section.lower() + "/svn update -r " + test_bot.get(section, "SVN_REVISION"))
-    os.system("wget -N --output-document=./" + section.lower() + "/firebug.xpi" + " " + test_bot.get(section, "FIREBUG_XPI"))
-    os.system("wget -N --output-document=./" + section.lower() + "/fbtest.xpi" + " " + test_bot.get(section, "FBTEST_XPI"))
+    os.system("wget --output-document=./" + section.lower() + "/firebug.xpi" + " " + test_bot.get(section, "FIREBUG_XPI"))
+    os.system("wget --output-document=./" + section.lower() + "/fbtest.xpi" + " " + test_bot.get(section, "FBTEST_XPI"))
     os.system("cp -r ./" + section.lower() + " " + serverpath)
     
