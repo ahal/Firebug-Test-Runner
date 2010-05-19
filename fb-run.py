@@ -1,6 +1,6 @@
 from ConfigParser import ConfigParser
 from time import sleep
-import os, sys, signal, subprocess, shlex, getopt, mozrunner
+import os, sys, signal, subprocess, shlex, getopt
 
 def ping_firefox():
     "See if Firefox is still running"
@@ -26,7 +26,12 @@ def cleanup(exit_code):
 
 # Initialization
 config = ConfigParser()
-config.read("./fb-test-runner.config")
+try:
+    config.read("./fb-test-runner.config")
+except ConfigParser.NoSectionError:
+    print "[Error] Could not find 'fb-test-runner.config'"
+    sys.exit(1)
+    
 # Retrieve variables from command line or config file
 serverpath = config.get("run", "serverpath")
 profile = config.get("run", "profile")
@@ -36,6 +41,7 @@ try:
 except getopt.GetoptError, err:
     print str(err) 
     sys.exit(2)
+
 for o, a in opts:
     if o == "-s":
         serverpath = a
@@ -44,30 +50,38 @@ for o, a in opts:
     elif 0 == "-p":
         profile = a 
     else:
-        assert False, "unhandled option"
+        assert False, "Unhandled command line option"
 
-if serverpath[-1:] != "/":
-    serverpath = serverpath + "/firebug" + firebug_version
-else:
-    serverpath = serverpath + "firebug" + firebug_version
-
-# Grab the extensions
-os.system("wget -N " + serverpath + "/firebug.xpi " + serverpath + "/fbtest.xpi")
-
-if profile.lower() == "auto":
+if config.get("run", "auto_profile").lower() == "on":
     # Attempt to find the default profile automatically
     p = subprocess.Popen("locate -r \\\\.mozilla/firefox.*\\\\.default$", shell=True, stdout=subprocess.PIPE)
     try:
         profile = p.communicate()[0]
+        profile = str(profile[:-1])
     except IndexError:
-        pass
-    
-print profile
-profile = str(profile[:-1])
-#print profile
-if not os.path.exists(profile):#"/home/mozilla/.mozilla/firefox/ty98qut7.default"):
-    #print "[Error] Profile doesn't exist: " + profile
-    cleanup(1)
+        print "[Warn] Could not find default profile automatically, using profile '" + profile + "' instead"
+
+# Ensure the profile actually exists
+if not os.path.exists(profile + "/prefs.js"):
+    print "[Error] Profile doesn't exist: " + profile
+    sys.exit(1)
+
+# Concatenate serverpath based on Firebug version
+if serverpath[-1:] != "/":
+    serverpath = serverpath + "/firebug" + firebug_version
+else:
+    serverpath = serverpath + "firebug" + firebug_version
+# If the extensions were somehow left over from last time, delete them to ensure we don't accidentally run
+if os.path.exists("./firebug.xpi"):
+    os.system("rm ./firebug.xpi")
+if os.path.exists("./fbtest.xpi"):
+    os.system("rm ./fbtest.xpi")
+# Grab the extensions from the server
+os.system("wget -N " + serverpath + "/firebug.xpi " + serverpath + "/fbtest.xpi")
+# Ensure the extensions were downloaded properly, exit if not
+if not os.path.exists("./firebug.xpi") or not os.path.exists("./fbtest.xpi"):
+    print "[Error] Extensions could not be downloaded. Check that '" + serverpath + "' exists and run 'fb-update.py'"
+    sys.exit(1)
 
 # Move existing log files to log_old folder (hidden)
 os.system("mv " + profile + "/firebug/fbtest/logs/* " + profile + "/firebug/fbtest/logs_old/")
@@ -78,21 +92,26 @@ sleep(2)
 # Install the two extensions using mozrunner
 subprocess.Popen(shlex.split("mozrunner -n -p " + profile + " --addons=\"./firebug.xpi\",\"./fbtest.xpi\""))
 sleep(5)
-# Run Firefox with -runFBTests command line option
+# Run Firefox with -runFBTests command line option (has to be run from shell otherwise log file won't be created)
 subprocess.Popen("firefox -runFBTests " + serverpath + "/tests/content/testlists/firebug" + firebug_version + ".html", shell=True)
 sleep(2)
 
-# Find the 
+# Find the log file
 for name in os.listdir(profile + "/firebug/fbtest/logs"):
     file = open(profile + "/firebug/fbtest/logs/" + name)
 
-# Send the log file to stdout as it arrives
+# Send the log file to stdout as it arrives, exit when firefox process is no longer running (i.e fbtests are finished)
 while ping_firefox():
     line = file.readline()
     if (line != ""):
         print line[:-1]
-
+    else:
+        sleep(1)
+        
+# Ensure we have retrieved the entire log file
+line = file.readline()
+while line != "":
+    print line[:-1]
 
 # Cleanup
 cleanup(0)
-

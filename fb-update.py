@@ -19,7 +19,7 @@ for o, a in opts:
     if o == "-s":
         serverpath = a
     else:
-        assert False, "unhandled option"
+        assert False, "Unhandled command line option"
 
 # Grab the test_bot.config file
 os.system("wget -N http://getfirebug.com/releases/firebug/test-bot.config")
@@ -27,7 +27,6 @@ test_bot = ConfigParser()
 test_bot.read(os.getcwd() + "/test-bot.config")
 # For each section in the config file, download the specified files and move them to the webserver
 for section in test_bot.sections():
-    print "svn co http://fbug.googlecode.com/svn/tests/" + " " + os.getcwd() + "/" + section.lower() + "/tests -r " + test_bot.get(section, "SVN_REVISION")
     if not os.path.isdir(os.path.curdir + section + "/.svn"):
         os.system("svn co http://fbug.googlecode.com/svn/tests/" + " " + os.getcwd() + "/" + section.lower() + "/tests -r " + test_bot.get(section, "SVN_REVISION"))
     else:
