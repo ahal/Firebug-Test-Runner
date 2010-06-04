@@ -1,6 +1,6 @@
 from ConfigParser import ConfigParser
 from optparse import OptionParser
-import os, sys, subprocess, mozrunner, httplib
+import os, sys, subprocess, mozrunner
 
 def cleanup():
     "Perform cleanup and exit"
@@ -55,9 +55,8 @@ profile = mozrunner.FirefoxProfile(profile=opt.profile, create_new=(True if opt.
 runner = mozrunner.FirefoxRunner(binary=opt.binary, profile=profile, cmdargs=["-runFBTests", os.path.join(opt.serverpath, "tests/content/testlists/firebug" + opt.version + ".html")])
 runner.start()
 
+# Sleep to ensure the log file has a chance to initialize
 mozrunner.sleep(5)
-
-print os.path.join(profile.profile, "firebug/fbtest/logs")
 
 # Find the log file
 for name in os.listdir(os.path.join(profile.profile, "firebug/fbtest/logs")):
