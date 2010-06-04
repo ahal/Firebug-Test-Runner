@@ -1,117 +1,81 @@
 from ConfigParser import ConfigParser
-from time import sleep
-import os, sys, signal, subprocess, shlex, getopt
+from optparse import OptionParser
+import os, sys, subprocess, mozrunner, httplib
 
-def ping_firefox():
-    "See if Firefox is still running"
-    for line in os.popen("ps xa"):
-        fields = line.split()
-        pid = fields[0]
-        process = fields[4]
-        if process.find("firefox-bin") > 0 and process.find("<defunct>") == -1:
-            return pid
-    return 0
-
-def kill_firefox():
-    "Kill Firefox if it is running"
-    pid = ping_firefox()
-    if pid > 0:
-        os.kill(int(pid), signal.SIGHUP)
-
-def cleanup(exit_code):
+def cleanup():
     "Perform cleanup and exit"
-    os.system("rm ./firebug.xpi")
-    os.system("rm ./fbtest.xpi")
-    sys.exit(exit_code)
+    if os.path.exists("firebug.xpi"):
+        subprocess.call("rm firebug.xpi", shell=True)
+    if os.path.exists("fbtest.xpi"):
+        subprocess.call("rm fbtest.xpi", shell=True)
 
 # Initialization
 config = ConfigParser()
 try:
-    config.read("./fb-test-runner.config")
+    config.read("fb-test-runner.config")
 except ConfigParser.NoSectionError:
     print "[Error] Could not find 'fb-test-runner.config'"
     sys.exit(1)
-    
-# Retrieve variables from command line or config file
-serverpath = config.get("run", "serverpath")
-profile = config.get("run", "profile")
-firebug_version = config.get("run", "firebug_version")
-try:
-    opts, args = getopt.getopt(sys.argv[1:], "s:v:p:")
-except getopt.GetoptError, err:
-    print str(err) 
-    sys.exit(2)
 
-for o, a in opts:
-    if o == "-s":
-        serverpath = a
-    elif o == "-v":
-        firebug_version = a
-    elif 0 == "-p":
-        profile = a 
+parser = OptionParser("usage: %prog [options]")
+parser.add_option("-b", "--binary", dest="binary", help="Firefox binary path")
+parser.add_option("-p", "--profile", dest="profile", help="The profile to use when running Firefox")
+parser.add_option("-s", "--serverpath", dest="serverpath", default=config.get("run", "serverpath"), help="The http server containing the fb tests")
+parser.add_option("-v", "--version", dest="version", default=config.get("run", "firebug_version"), help="The firebug version to run")
+(opt, remainder) = parser.parse_args()
+
+if opt.profile != None:
+    # Ensure the profile actually exists
+    if not os.path.exists(os.path.join(opt.profile, "prefs.js")):
+        print "[Warn] Profile '" + opt.profile + "' doesn't exist.  Creating temporary profile"
+        opt.profile = None
     else:
-        assert False, "Unhandled command line option"
-
-if config.get("run", "auto_profile").lower() == "on":
-    # Attempt to find the default profile automatically
-    p = subprocess.Popen("locate -r \\\\.mozilla/firefox.*\\\\.default$", shell=True, stdout=subprocess.PIPE)
-    try:
-        profile = p.communicate()[0]
-        profile = str(profile[:-1])
-    except IndexError:
-        print "[Warn] Could not find default profile automatically, using profile '" + profile + "' instead"
-
-# Ensure the profile actually exists
-if not os.path.exists(profile + "/prefs.js"):
-    print "[Error] Profile doesn't exist: " + profile
-    sys.exit(1)
+        # Move any potential existing log files to log_old folder
+        subprocess.call("mv " + os.path.join(opt.profile, "firebug/fbtest/logs/*") + " " + os.path.join(opt.profile, "firebug/fbtest/logs_old"), shell=True)
 
 # Concatenate serverpath based on Firebug version
-if serverpath[-1:] != "/":
-    serverpath = serverpath + "/firebug" + firebug_version
-else:
-    serverpath = serverpath + "firebug" + firebug_version
-# If the extensions were somehow left over from last time, delete them to ensure we don't accidentally run
-if os.path.exists("./firebug.xpi"):
-    os.system("rm ./firebug.xpi")
-if os.path.exists("./fbtest.xpi"):
-    os.system("rm ./fbtest.xpi")
-# Grab the extensions from the server
-os.system("wget -N " + serverpath + "/firebug.xpi " + serverpath + "/fbtest.xpi")
+opt.serverpath = os.path.join(opt.serverpath, "firebug" + opt.version)
+
+# If the extensions were somehow left over from last time, delete them to ensure we don't accidentally run the wrong version
+cleanup()
+
+# Grab the extensions from the server   
+subprocess.call("wget -N " + os.path.join(opt.serverpath, "firebug.xpi") + " " + os.path.join(opt.serverpath, "fbtest.xpi"), shell=True)
+
 # Ensure the extensions were downloaded properly, exit if not
-if not os.path.exists("./firebug.xpi") or not os.path.exists("./fbtest.xpi"):
-    print "[Error] Extensions could not be downloaded. Check that '" + serverpath + "' exists and run 'fb-update.py'"
+if not os.path.exists("firebug.xpi") or not os.path.exists("fbtest.xpi"):
+    print "[Error] Extensions could not be downloaded. Check that '" + opt.serverpath + "' exists and run 'fb-update.py' on the host machine"
     sys.exit(1)
 
-# Move existing log files to log_old folder (hidden)
-os.system("mv " + profile + "/firebug/fbtest/logs/* " + profile + "/firebug/fbtest/logs_old/")
-
 # If firefox is running, kill it (needed for mozrunner)
-kill_firefox()
-sleep(2)
-# Install the two extensions using mozrunner
-subprocess.Popen(shlex.split("mozrunner -n -p " + profile + " --addons=\"./firebug.xpi\",\"./fbtest.xpi\""))
-sleep(5)
-# Run Firefox with -runFBTests command line option (has to be run from shell otherwise log file won't be created)
-subprocess.Popen("firefox -runFBTests " + serverpath + "/tests/content/testlists/firebug" + firebug_version + ".html", shell=True)
-sleep(2)
+mozrunner.kill_process_by_name("firefox-bin")
+
+# Create profile for mozrunner and start the Firebug tests
+profile = mozrunner.FirefoxProfile(profile=opt.profile, create_new=(True if opt.profile==None else False), addons=["firebug.xpi", "fbtest.xpi"])
+runner = mozrunner.FirefoxRunner(binary=opt.binary, profile=profile, cmdargs=["-runFBTests", os.path.join(opt.serverpath, "tests/content/testlists/firebug" + opt.version + ".html")])
+runner.start()
+
+mozrunner.sleep(5)
+
+print os.path.join(profile.profile, "firebug/fbtest/logs")
 
 # Find the log file
-for name in os.listdir(profile + "/firebug/fbtest/logs"):
-    file = open(profile + "/firebug/fbtest/logs/" + name)
+for name in os.listdir(os.path.join(profile.profile, "firebug/fbtest/logs")):
+    file = open(os.path.join(profile.profile, "firebug/fbtest/logs/", name))
 
 # Send the log file to stdout as it arrives, exit when firefox process is no longer running (i.e fbtests are finished)
-while ping_firefox():
+while len(mozrunner.get_pids("firefox")) > 0:
     line = file.readline()
     if (line != ""):
         print line[:-1]
     else:
-        sleep(1)
+        mozrunner.sleep(1)
         
 # Ensure we have retrieved the entire log file
 line = file.readline()
 while line != "":
     print line[:-1]
-
+    line = file.readline()
+    
 # Cleanup
-cleanup(0)
+cleanup()
