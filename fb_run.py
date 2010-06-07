@@ -47,8 +47,6 @@ def main(argv):
     # Concatenate serverpath based on Firebug version
     opt.serverpath = opt.serverpath + ("" if opt.serverpath[-1] == "/" else "/") + "firebug" + opt.version
 
-    print opt.serverpath
-
     # If the extensions were somehow left over from last time, delete them to ensure we don't accidentally run the wrong version
     cleanup()
 
@@ -86,10 +84,9 @@ def main(argv):
 
 
     # Send the log file to stdout as it arrives, exit when firefox process is no longer running (i.e fbtests are finished)
-    while len(mozrunner.get_pids("firefox")) > 0:
+    while len(mozrunner.get_pids("firefox-bin")) > 0:
         mozrunner.sleep(1)
     
-    print file.name
     fb_logs.main(["--log", file.name, "--database", opt.databasename, "--couch", opt.couchserveruri])    
     
 ## This will be needed for buildbot integration later on
