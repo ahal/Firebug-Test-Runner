@@ -23,7 +23,7 @@ def main(argv):
         build = lookup[build]
         curdir = os.getcwd()
         os.chdir("/work/mozilla/builds/hg.mozilla.org/sisyphus/bin")
-        subprocess.call("builder.sh -p firefox -b " + build + " -T debug -B 'clobber checkout build'", shell=True)
+        subprocess.call("./builder.sh -p firefox -b " + build + " -T debug -B 'clobber checkout build'", shell=True)
         os.chdir(curdir)
         fb_run.main(['-b', '/work/mozilla/builds/' + build + '/mozilla/firefox-debug/dist/bin/firefox'])
         
