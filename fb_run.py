@@ -29,8 +29,8 @@ def main(argv):
     parser.add_option("-p", "--profile", dest="profile", help="The profile to use when running Firefox")
     parser.add_option("-s", "--serverpath", dest="serverpath", default=config.get("run", "serverpath"), help="The http server containing the fb tests")
     parser.add_option("-v", "--version", dest="version", default=config.get("run", "firebug_version"), help="The firebug version to run")
-    parser.add_option("-c", "--couch", dest=couchserveruri, default=config.get("run", "couch_server"), help="URI to couchdb server for log information")
-    parser.add_option("-d", "--database", dest=databasename, default=config.get("run", "database_name"), help="Database name to keep log information")
+    parser.add_option("-c", "--couch", dest="couchserveruri", default=config.get("run", "couch_server"), help="URI to couchdb server for log information")
+    parser.add_option("-d", "--database", dest="databasename", default=config.get("run", "database_name"), help="Database name to keep log information")
     (opt, remainder) = parser.parse_args(argv)
 
     if opt.profile != None:
