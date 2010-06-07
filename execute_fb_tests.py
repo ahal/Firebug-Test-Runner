@@ -21,10 +21,7 @@ def main(argv):
     builds = config.get("Firebug" + opt.version, "FIREFOX_VERSION").split(",")
     for build in builds:
         build = lookup[build]
-        curdir = os.getcwd()
-        os.chdir("/work/mozilla/builds/hg.mozilla.org/sisyphus/bin")
-        subprocess.call("./builder.sh -p firefox -b " + build + " -T debug -B 'clobber checkout build'", shell=True)
-        os.chdir(curdir)
+        subprocess.call("/work/mozilla/builds/hg.mozilla.org/sisyphus/bin/builder.sh -p firefox -b " + build + " -T debug -B 'clobber checkout build'", shell=True)
         fb_run.main(['-b', '/work/mozilla/builds/' + build + '/mozilla/firefox-debug/dist/bin/firefox'])
         
     
