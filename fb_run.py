@@ -89,7 +89,7 @@ def main(argv):
     while len(mozrunner.get_pids("firefox")) > 0:
         mozrunner.sleep(1)
     
-    fblogs.main(["--log", file.name, "--database", opt.databasename, "--couch", opt.couchserveruri])    
+    fb_logs.main(["--log", file.name, "--database", opt.databasename, "--couch", opt.couchserveruri])    
     
 ## This will be needed for buildbot integration later on
 ##        line = file.readline()
