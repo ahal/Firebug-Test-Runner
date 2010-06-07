@@ -1,4 +1,4 @@
-import fb_run, ConfigParser, os, subprocess
+import fb_run, ConfigParser, os, subprocess, sys
 
 def retrieve_url(url, filename):
     ret = urllib2.urlopen(url)
