@@ -14,7 +14,7 @@ def main(argv):
     (opt, remainder) = parser.parse_args(argv)
     
     lookup = { '3.5' : '1.9.1', '3.6' : '1.9.2', '3.7' : '1.9.3' }
-    retrieve_url(opt.serverpath, "test-bot.config")
+    retrieve_url(opt.serverpath + ("" if opt.serverpath[-1] == "/" else "/") + "test-bot.config", "test-bot.config")
     
     config = ConfigParser.ConfigParser()
     config.read("test-bot.config")
