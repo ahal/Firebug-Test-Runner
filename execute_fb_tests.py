@@ -11,25 +11,28 @@ def build_needed(build):
     os.chdir(os.path.join("/work/mozilla/builds/", build, "mozilla"))
     subprocess.call("hg update", shell=True)
     proc = subprocess.Popen("hg tip", shell=True, stdout=subprocess.PIPE)
-    new_changeset = proc.communicate[0]()
-    new_changeset = new_changeset[new_changeset.rindex(":"):]
-    
+    new_changeset = proc.communicate()[0]
+    # Extract the actual changeset from the output
+    new_changeset = new_changeset[new_changeset.index(":", new_changeset.index(":") + 1) + 1:new_changeset.index("\n")]
+    os.chdir(curdir)
+
+    if not os.path.exists("changesets"):
+        file = open("changesets", "w")
+        file.close()
+    # Read in changesets
     cs = ConfigParser.ConfigParser()
-    file = open("changesets", "w")
-    cs.read(file)        
+    cs.read("changesets")        
     if cs.has_section(build):
         old_changeset = cs.get(build, "changeset")
         if old_changeset == new_changeset:
-            file.close()
-            os.chdir(curdir)
-            return 0
+            return False
     else:
         cs.add_section(build)
-    cs.set(build, new_changeset)
+    cs.set(build, "changeset", new_changeset)
+    file = open("changesets", "w")
     cs.write(file)
     file.close()
-    os.chdir(curdir)
-    return 1
+    return True
 
 def main(argv):
     usage = "%prog [options]"
