@@ -5,6 +5,31 @@ def retrieve_url(url, filename):
     output = open(filename, 'wb')
     output.write(ret.read())
     output.close()
+    
+def build_needed(build):
+    curdir = os.getcwd()
+    os.chdir(os.path.join("/work/mozilla/builds/", build, "mozilla"))
+    subprocess.call("hg update", shell=True)
+    proc = subprocess.Popen("hg tip", shell=True, stdout=subprocess.PIPE)
+    new_changeset = proc.communicate[0]()
+    new_changeset = new_changeset[new_changeset.rindex(":"):]
+    
+    cs = ConfigParser.ConfigParser()
+    file = open("changesets", "w")
+    cs.read(file)        
+    if cs.has_section(build):
+        old_changeset = cs.get(build, "changeset")
+        if old_changeset == new_changeset:
+            file.close()
+            os.chdir(curdir)
+            return 0
+    else:
+        cs.add_section(build)
+    cs.set(build, new_changeset)
+    cs.write(file)
+    file.close()
+    os.chdir(curdir)
+    return 1
 
 def main(argv):
     usage = "%prog [options]"
@@ -15,21 +40,28 @@ def main(argv):
     parser.add_option("-c", "--couch", dest="couchserveruri", help="URI to couchdb server for log information")
     parser.add_option("-d", "--database", dest="databasename", help="Database name to keep log information")
     (opt, remainder) = parser.parse_args(argv)
+    argv.append("-b")
+    argv.append("buildpath")        # Placeholder
     
+    # Lookup table mapping firefox versions to builds
     lookup = { '3.5' : '1.9.1', '3.6' : '1.9.2', '3.7' : '1.9.3' }
+    # Download test-bot.config to see which versions of Firefox to run the FBTests against
     retrieve_url(opt.serverpath + ("" if opt.serverpath[-1] == "/" else "/") + "test-bot.config", "test-bot.config")
     
     config = ConfigParser.ConfigParser()
     config.read("test-bot.config")
+    
     builds = config.get("Firebug" + opt.version, "FIREFOX_VERSION").split(",")
+    # For each version of Firefox, see if it needs to be rebuilt and call fb_run to run the tests
     for build in builds:
         build = lookup[build]
-        subprocess.call("/work/mozilla/builds/hg.mozilla.org/sisyphus/bin/builder.sh -p firefox -b " + build + " -T debug -B 'clobber checkout build'", shell=True, env={"TEST_DIR":"/work/mozilla/builds/hg.mozilla.org/sisyphus",})
-        fb_run.main(['-b', '/work/mozilla/builds/' + build + '/mozilla/firefox-debug/dist/bin/firefox', '-c', opt.couchserveruri, '-d', opt.database])
         
-    
-    config.close()
-    
+        if build_needed(build):
+            subprocess.call("$TEST_DIR/bin/builder.sh -p firefox -b " + build + " -T debug -B 'clobber checkout build'", shell=True, env={"TEST_DIR":"/work/mozilla/builds/hg.mozilla.org/sisyphus",})
+
+        # Run fb_run.py with argv
+        argv[len(argv) - 1:] = ["/work/mozilla/builds/" + build + "/mozilla/firefox-debug/dist/bin/firefox"]
+        fb_run.main(argv)
     
 if __name__ == '__main__':
     main(sys.argv[1:])
