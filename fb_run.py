@@ -31,7 +31,11 @@ def main(argv):
     parser.add_option("-v", "--version", dest="version", default=config.get("run", "firebug_version"), help="The firebug version to run")
     parser.add_option("-c", "--couch", dest="couchserveruri", default=config.get("log", "couch_server"), help="URI to couchdb server for log information")
     parser.add_option("-d", "--database", dest="databasename", default=config.get("log", "database_name"), help="Database name to keep log information")
+    parser.add_option("-t", "--testlist", dest="testlist", help="Specify the name of the testlist to use, should usually use the default")
     (opt, remainder) = parser.parse_args(argv)
+
+    if opt.testlist == None:
+        opt.testlist = "firebug" + opt.version + ".html"
 
     if opt.profile != None:
         # Ensure the profile actually exists
@@ -64,7 +68,7 @@ def main(argv):
 
     # Create profile for mozrunner and start the Firebug tests
     profile = mozrunner.FirefoxProfile(profile=opt.profile, create_new=(True if opt.profile==None else False), addons=["firebug.xpi", "fbtest.xpi"])
-    runner = mozrunner.FirefoxRunner(binary=opt.binary, profile=profile, cmdargs=["-runFBTests", os.path.join(opt.serverpath, "tests/content/testlists/firebug" + opt.version + ".html")])
+    runner = mozrunner.FirefoxRunner(binary=opt.binary, profile=profile, cmdargs=["-runFBTests", os.path.join(opt.serverpath, "tests/content/testlists/" + opt.testlist)])
     runner.start()
 
     # Find the log file
