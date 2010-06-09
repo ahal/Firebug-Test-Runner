@@ -87,10 +87,14 @@ def main(argv):
         sys.exit(1)
 
 
-    # Send the log file to stdout as it arrives, exit when firefox process is no longer running (i.e fbtests are finished)
-    while len(mozrunner.get_pids("firefox-bin")) > 0:
-        mozrunner.sleep(1)
-    
+    # Send the log file to stdout as it arrives, exit when fbtests are finished
+    line = ""
+    while line.find("Test Suite Finished") == -1:
+        line = file.readline()
+        if line == "":
+            mozrunner.sleep(1)        
+    # Give last two lines of file a chance to write    
+    mozrunner.sleep(1)
     fb_logs.main(["--log", file.name, "--database", opt.databasename, "--couch", opt.couchserveruri])    
     
 ## This will be needed for buildbot integration later on
@@ -108,6 +112,7 @@ def main(argv):
         
     # Cleanup
     file.close()
+    mozrunner.kill_process_by_name("firefox-bin")
     cleanup()
     
 if __name__ == '__main__':
