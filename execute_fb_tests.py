@@ -9,8 +9,8 @@ def retrieve_url(url, filename):
 def build_needed(build):
     curdir = os.getcwd()
     os.chdir(os.path.join("/work/mozilla/builds/", build, "mozilla"))
-    subprocess.call("hg pull && hg update", shell=True)
-    proc = subprocess.Popen("hg tip", shell=True, stdout=subprocess.PIPE)
+    subprocess.call("hg pull && hg update", shell=True, env={"PATH":"/usr/local/bin",})
+    proc = subprocess.Popen("hg tip", shell=True, stdout=subprocess.PIPE, env={"PATH":"/usr/local/bin",})
     new_changeset = proc.communicate()[0]
     # Extract the actual changeset from the output
     new_changeset = new_changeset[new_changeset.index(":", new_changeset.index(":") + 1) + 1:new_changeset.index("\n")]
