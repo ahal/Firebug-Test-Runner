@@ -1,5 +1,5 @@
-import couchquery
-import re
+import couchquery, dirtyutils
+import re, sys
 from optparse import OptionParser
 
 
@@ -22,8 +22,18 @@ def main(argv):
     parser.add_option('--logfile', action='store', type='string',
                       dest='logfilename',
                       help='log file path.')
+                    
+    parser.add_option('--changeset', action='store', type='string',
+                      dest='changeset',
+                      default='unspecified',
+                      help='changeset of build the test was run against.')
 
     (options, args) = parser.parse_args(argv)
+
+    platform = dirtyutils.get_platform()
+    print platform
+        
+    sys.exit(0)
 
     couchdb = couchquery.Database(options.couchserveruri + '/' + options.databasename)
 
@@ -51,6 +61,8 @@ def main(argv):
             if match:
                 #print 'test: meta: %s=%s' % (match.group(1), match.group(2))
                 testheaderdoc[match.group(1)] = match.group(2)
+                testheaderdoc["changeset"] = options.changeset
+                testheaderdoc["architecture"] = platform["cpu"]
 
         match = reFirebugStart.match(logline)
         if match:
