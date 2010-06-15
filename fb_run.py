@@ -1,6 +1,6 @@
 from ConfigParser import ConfigParser
 from optparse import OptionParser
-import os, sys, mozrunner, urllib2, fb_logs, dirtyutils, firefoxrunner
+import os, sys, mozrunner, urllib2, fb_logs
 
 def cleanup():
     "Perform cleanup and exit"
