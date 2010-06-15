@@ -19,7 +19,7 @@ def get_changeset(build):
     changeset = proc.communicate()[0]
     os.chdir(curdir)
     # Extract the actual changeset from the output
-    return changeset[new_changeset.index(":", new_changeset.index(":") + 1) + 1:new_changeset.index("\n")]
+    return changeset[changeset.index(":", changeset.index(":") + 1) + 1:changeset.index("\n")]
     
 def build_needed(build):
     # Find new changeset
@@ -51,6 +51,7 @@ def main(argv):
     parser.add_option("-v", "--version", dest="version", help="The firebug version to run")
     parser.add_option("-c", "--couch", dest="couchserveruri", help="URI to couchdb server for log information")
     parser.add_option("-d", "--database", dest="databasename", help="Database name to keep log information")
+    parser.add_option("-t", "--testlist", dest="testlist", help="Testlist to use. Should use default")
     (opt, remainder) = parser.parse_args(argv)
     # Synthesize arguments to be passed to fb_run
     argv.append("-b")

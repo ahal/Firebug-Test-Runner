@@ -22,7 +22,7 @@ def main(argv):
         config.read("fb-test-runner.config")
     except ConfigParser.NoSectionError:
         print "[Error] Could not find 'fb-test-runner.config'"
-        sys.exit(1)
+        return 1
 
     parser = OptionParser("usage: %prog [options]")
     parser.add_option("-b", "--binary", dest="binary", help="Firefox binary path")
@@ -62,7 +62,7 @@ def main(argv):
     # Ensure the extensions were downloaded properly, exit if not
     if not os.path.exists("firebug.xpi") or not os.path.exists("fbtest.xpi"):
         print "[Error] Extensions could not be downloaded. Check that '" + opt.serverpath + "' exists and run 'fb-update.py' on the host machine"
-        sys.exit(1)
+        return 1
 
     # If firefox is running, kill it (needed for mozrunner)
     mozrunner.kill_process_by_name("firefox-bin")
@@ -85,7 +85,7 @@ def main(argv):
     if not file:
         print "[Error] Could not find the log file"
         cleanup()
-        sys.exit(1)
+        return 1
 
 
     # Send the log file to stdout as it arrives, exit when fbtests are finished
