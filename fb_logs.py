@@ -31,9 +31,6 @@ def main(argv):
     (options, args) = parser.parse_args(argv)
 
     platform = dirtyutils.get_platform()
-    print platform
-        
-    sys.exit(0)
 
     couchdb = couchquery.Database(options.couchserveruri + '/' + options.databasename)
 
