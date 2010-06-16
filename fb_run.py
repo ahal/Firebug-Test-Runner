@@ -1,3 +1,5 @@
+#!/usr/bin/python
+
 from ConfigParser import ConfigParser
 from optparse import OptionParser
 import os, sys, mozrunner, urllib2, fb_logs
