@@ -69,7 +69,7 @@ def main(argv):
 
     # Create profile for mozrunner and start the Firebug tests
     profile = mozrunner.FirefoxProfile(profile=opt.profile, create_new=(True if opt.profile==None else False), addons=["firebug.xpi", "fbtest.xpi"])
-    runner = mozrunner.FirefoxRunner(binary=opt.binary, profile=profile, cmdargs=["-runFBTests", opt.serverpath + "tests/content/testlists/" + opt.testlist])
+    runner = mozrunner.FirefoxRunner(binary=opt.binary, profile=profile, cmdargs=["-runFBTests", opt.serverpath + "/tests/content/testlists/" + opt.testlist])
     runner.start()
 
     # Find the log file
