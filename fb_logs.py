@@ -58,8 +58,9 @@ def main(argv):
             if match:
                 #print 'test: meta: %s=%s' % (match.group(1), match.group(2))
                 testheaderdoc[match.group(1)] = match.group(2)
-                testheaderdoc["changeset"] = options.changeset
-                testheaderdoc["architecture"] = platform["cpu"]
+                testheaderdoc["App Changeset"] = options.changeset
+                testheaderdoc["CPU Architecture"] = platform["cpu"]
+                testheaderdoc["OS Detailed Name"] = platform["version"]
 
         match = reFirebugStart.match(logline)
         if match:
