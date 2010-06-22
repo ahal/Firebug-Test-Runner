@@ -14,7 +14,7 @@ def retrieve_url(url, filename):
     output.close()
     return 0
 
-def get_changeset(build, checkout):
+def get_changeset(build, checkout=True):
     curdir = os.getcwd()
     if build == "1.9.2":
         os.chdir("/work/mozilla/builds/hg.mozilla.org/mozilla-1.9.2")
