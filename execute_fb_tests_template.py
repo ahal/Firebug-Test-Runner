@@ -58,8 +58,8 @@ def run_builds(argv, opt):
                 return "[Error] Failure while building Mozilla " + build
 
         # Run fb_run.py with argv
-        argv[len(argv) - 3:] = ["/work/mozilla/builds/" + build + "/mozilla/firefox-debug/dist/bin/firefox"]
-        argv[len(argv) - 1:] = [get_changeset(build)]
+        argv[-3] = os.path.join("/work/mozilla/builds/", build, "mozilla/firefox-debug/dist/bin/firefox")
+        argv[-1] = get_changeset(build)
         return fb_run.main(argv)
 
 def main(argv):
