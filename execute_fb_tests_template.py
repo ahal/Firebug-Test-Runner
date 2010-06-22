@@ -51,6 +51,7 @@ def run_builds(argv, opt):
     builds = config.get("Firebug" + opt.version, "FIREFOX_VERSION").split(",")
     # For each version of Firefox, see if it needs to be rebuilt and call fb_run to run the tests
     for build in builds:
+        print "[Info] Running Firebug" + opt.version + " test against Mozilla " + build
         build = lookup[build]
         
         if build_needed(build):
@@ -61,7 +62,10 @@ def run_builds(argv, opt):
         # Run fb_run.py with argv
         argv[-3] = os.path.join("/work/mozilla/builds/", build, "mozilla/firefox-debug/dist/bin/firefox")
         argv[-1] = get_changeset(build, False)
-        return fb_run.main(argv)
+        ret = fb_run.main(argv)
+        if ret != 0:
+            print ret
+    return 0
 
 def main(argv):
     usage = "%prog [options]"
