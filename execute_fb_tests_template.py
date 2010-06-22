@@ -14,7 +14,7 @@ def retrieve_url(url, filename):
     output.close()
     return 0
 
-def get_changeset(build):
+def get_changeset(build, checkout):
     curdir = os.getcwd()
     if build == "1.9.2":
         os.chdir("/work/mozilla/builds/hg.mozilla.org/mozilla-1.9.2")
@@ -22,7 +22,8 @@ def get_changeset(build):
         os.chdir("/work/mozilla/builds/hg.mozilla.org/mozilla-central")
     else:
         return "0"
-    subprocess.call("hg pull && hg update", shell=True, env={"PATH":"/usr/local/bin",})
+    if checkout:
+        subprocess.call("hg pull && hg update", shell=True, env={"PATH":"/usr/local/bin",})
     proc = subprocess.Popen("hg tip", shell=True, stdout=subprocess.PIPE, env={"PATH":"/usr/local/bin",})
     changeset = proc.communicate()[0]
     os.chdir(curdir)
