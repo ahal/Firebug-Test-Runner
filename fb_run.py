@@ -12,10 +12,14 @@ def cleanup():
         os.remove("fbtest.xpi")
         
 def retrieve_url(url, filename):
-    ret = urllib2.urlopen(url)
+    try:    
+        ret = urllib2.urlopen(url)
+    except:
+        return -1
     output = open(filename, 'wb')
     output.write(ret.read())
     output.close()
+    return 0
 
 def main(argv): 
     # Initialization
@@ -23,8 +27,10 @@ def main(argv):
     try:
         config.read("fb-test-runner.config")
     except ConfigParser.NoSectionError:
-        print "[Error] Could not find 'fb-test-runner.config'"
-        return 1
+        print "[Warn] Could not find 'fb-test-runner.config' in local directory"
+        file = open("fb-test-runner.config", "w")
+        file.close()
+        config.read("fb-test-runner.config")
 
     parser = OptionParser("usage: %prog [options]")
     parser.add_option("-b", "--binary", dest="binary", help="Firefox binary path")
@@ -46,7 +52,6 @@ def main(argv):
             print "[Warn] Profile '" + opt.profile + "' doesn't exist.  Creating temporary profile"
             opt.profile = None
         else:
-            pass
             # Move any potential existing log files to log_old folder
             for name in os.listdir(os.path.join(opt.profile, "firebug/fbtest/logs")):
                 os.rename(os.path.join(opt.profile, "firebug/fbtest/logs", name), os.path.join(opt.profile, "firebug/fbtest/logs_old", name))
@@ -58,20 +63,20 @@ def main(argv):
     cleanup()
 
     # Grab the extensions from the server   
-    retrieve_url(opt.serverpath + "/firebug.xpi", "firebug.xpi")
-    retrieve_url(opt.serverpath + "/fbtest.xpi", "fbtest.xpi")
-
-    # Ensure the extensions were downloaded properly, exit if not
-    if not os.path.exists("firebug.xpi") or not os.path.exists("fbtest.xpi"):
-        print "[Error] Extensions could not be downloaded. Check that '" + opt.serverpath + "' exists and run 'fb-update.py' on the host machine"
-        return 1
+    if retrieve_url(opt.serverpath + "/firebug.xpi", "firebug.xpi") != 0 or retrieve_url(opt.serverpath + "/fbtest.xpi", "fbtest.xpi") != 0:
+        return "[Error] Extensions could not be downloaded. Check that '" + opt.serverpath + "' exists and run 'fb-update.py' on the host machine"
 
     # If firefox is running, kill it (needed for mozrunner)
     mozrunner.kill_process_by_name("firefox-bin")
 
+    # Create environment variables
+    dict = os.environ
+    dict["XPC_DEBUG_WARN"] = "warn"
+
     # Create profile for mozrunner and start the Firebug tests
+    print "[Info] Starting FBTests"
     profile = mozrunner.FirefoxProfile(profile=opt.profile, create_new=(True if opt.profile==None else False), addons=["firebug.xpi", "fbtest.xpi"])
-    runner = mozrunner.FirefoxRunner(binary=opt.binary, profile=profile, cmdargs=["-runFBTests", opt.serverpath + "/tests/content/testlists/" + opt.testlist])
+    runner = mozrunner.FirefoxRunner(binary=opt.binary, profile=profile, cmdargs=["-runFBTests", opt.serverpath + "/tests/content/testlists/" + opt.testlist], env=dict)
     runner.start()
 
     # Find the log file
@@ -85,20 +90,21 @@ def main(argv):
             timeout += 1
             mozrunner.sleep(1)
     if not file:
-        print "[Error] Could not find the log file"
         cleanup()
-        return 1
+        return "[Error] Could not find the log file in profile '" + profile + "'"
 
 
-    # Send the log file to stdout as it arrives, exit when fbtests are finished
+    # Send the log file to fb_logs.py, exit when fbtests are finished
     line = ""
     while line.find("Test Suite Finished") == -1:
         line = file.readline()
         if line == "":
             mozrunner.sleep(1)        
     # Give last two lines of file a chance to write    
-    mozrunner.sleep(1)
-    fb_logs.main(["--log", file.name, "--database", opt.databasename, "--couch", opt.couchserveruri, "--changeset", opt.changeset])    
+    mozrunner.sleep(2)
+    print "[Info] Sending log file to couchdb at '" + opt.couchserveruri + "'"
+    if fb_logs.main(["--log", file.name, "--database", opt.databasename, "--couch", opt.couchserveruri, "--changeset", opt.changeset]) != 0:
+        return "[Error] Log file not sent to couchdb at server: '" + opt.couchserveruri + "' and database: '" + opt.databasename + "'" 
     
 ## This will be needed for buildbot integration later on
 ##        line = file.readline()
@@ -117,6 +123,7 @@ def main(argv):
     file.close()
     mozrunner.kill_process_by_name("firefox-bin")
     cleanup()
+    return 0
     
 if __name__ == '__main__':
     main(sys.argv[1:])

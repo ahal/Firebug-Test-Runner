@@ -1,10 +1,17 @@
 import fb_run, ConfigParser, os, subprocess, sys, optparse, urllib2
 
+# Global changeset variable
+changeset = 0
+
 def retrieve_url(url, filename):
-    ret = urllib2.urlopen(url)
+    try:
+        ret = urllib2.urlopen(url)
+    except:
+        return -1
     output = open(filename, 'wb')
     output.write(ret.read())
     output.close()
+    return 0
 
 def get_changeset(build):
     curdir = os.getcwd()
@@ -24,24 +31,35 @@ def get_changeset(build):
 def build_needed(build):
     # Find new changeset
     new_changeset = get_changeset(build)
-    # Create the changesets file if it doesn't exist
-    if not os.path.exists("changesets"):
-        file = open("changesets", "w")
-        file.close()
-    # Read in changesets
-    cs = ConfigParser.ConfigParser()
-    cs.read("changesets")        
-    if cs.has_section(build):
-        old_changeset = cs.get(build, "changeset")
-        if old_changeset == new_changeset:
-            return False
-    else:
-        cs.add_section(build)
-    cs.set(build, "changeset", new_changeset)
-    file = open("changesets", "w")
-    cs.write(file)
-    file.close()
-    return True
+    global changeset
+    if changeset != new_changeset:
+        return True
+    return False
+
+def run_builds(argv):
+    # Lookup table mapping firefox versions to builds
+    lookup = { '3.5' : '1.9.1', '3.6' : '1.9.2', '3.7' : '1.9.3' }
+    # Download test-bot.config to see which versions of Firefox to run the FBTests against
+    if retrieve_url(opt.serverpath + ("" if opt.serverpath[-1] == "/" else "/") + "test-bot.config", "test-bot.config") != 0:
+        return "[Error] Could not download 'test-bot.config' from '" + opt.serverpath + "'"
+    
+    config = ConfigParser.ConfigParser()
+    config.read("test-bot.config")
+    
+    builds = config.get("Firebug" + opt.version, "FIREFOX_VERSION").split(",")
+    # For each version of Firefox, see if it needs to be rebuilt and call fb_run to run the tests
+    for build in builds:
+        build = lookup[build]
+        
+        if build_needed(build):
+            ret = subprocess.call("$TEST_DIR/bin/builder.sh -p firefox -b " + build + " -T debug -B 'clobber checkout build'", shell=True, env={"TEST_DIR":"/work/mozilla/builds/hg.mozilla.org/sisyphus",})
+            if ret != 0:
+                return "[Error] Failure while building Mozilla " + build
+
+        # Run fb_run.py with argv
+        argv[len(argv) - 3:] = ["/work/mozilla/builds/" + build + "/mozilla/firefox-debug/dist/bin/firefox"]
+        argv[len(argv) - 1:] = [get_changeset(build)]
+        return fb_run.main(argv)
 
 def main(argv):
     usage = "%prog [options]"
@@ -59,26 +77,14 @@ def main(argv):
     argv.append("--changeset")
     argv.append("changeset")        # Placeholder
     
-    # Lookup table mapping firefox versions to builds
-    lookup = { '3.5' : '1.9.1', '3.6' : '1.9.2', '3.7' : '1.9.3' }
-    # Download test-bot.config to see which versions of Firefox to run the FBTests against
-    retrieve_url(opt.serverpath + ("" if opt.serverpath[-1] == "/" else "/") + "test-bot.config", "test-bot.config")
-    
-    config = ConfigParser.ConfigParser()
-    config.read("test-bot.config")
-    
-    builds = config.get("Firebug" + opt.version, "FIREFOX_VERSION").split(",")
-    # For each version of Firefox, see if it needs to be rebuilt and call fb_run to run the tests
-    for build in builds:
-        build = lookup[build]
+    while True:
+        print "[Info] Starting builds and FBTests for Firebug" + opt.version
+        ret = run_builds(argv)
+        if ret != 0:
+            print ret
+        print "[Info] Sleeping for 1 hour"
+        sleep(3600)
         
-        if build_needed(build):
-            subprocess.call("$TEST_DIR/bin/builder.sh -p firefox -b " + build + " -T debug -B 'clobber checkout build'", shell=True, env={"TEST_DIR":"/work/mozilla/builds/hg.mozilla.org/sisyphus",})
-
-        # Run fb_run.py with argv
-        argv[len(argv) - 3:] = ["/work/mozilla/builds/" + build + "/mozilla/firefox-debug/dist/bin/firefox"]
-        argv[len(argv) - 1:] = [get_changeset(build)]
-        fb_run.main(argv)
     
 if __name__ == '__main__':
     main(sys.argv[1:])
