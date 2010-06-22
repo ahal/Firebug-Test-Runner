@@ -36,7 +36,7 @@ def build_needed(build):
         return True
     return False
 
-def run_builds(argv):
+def run_builds(argv, opt):
     # Lookup table mapping firefox versions to builds
     lookup = { '3.5' : '1.9.1', '3.6' : '1.9.2', '3.7' : '1.9.3' }
     # Download test-bot.config to see which versions of Firefox to run the FBTests against
@@ -79,7 +79,7 @@ def main(argv):
     
     while True:
         print "[Info] Starting builds and FBTests for Firebug" + opt.version
-        ret = run_builds(argv)
+        ret = run_builds(argv, opt)
         if ret != 0:
             print ret
         print "[Info] Sleeping for 1 hour"
