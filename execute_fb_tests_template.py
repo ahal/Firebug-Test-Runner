@@ -51,8 +51,8 @@ def run_builds(argv, opt):
     builds = config.get("Firebug" + opt.version, "FIREFOX_VERSION").split(",")
     # For each version of Firefox, see if it needs to be rebuilt and call fb_run to run the tests
     for build in builds:
-        print "[Info] Running Firebug" + opt.version + " test against Mozilla " + build
         build = lookup[build]
+        print "[Info] Running Firebug" + opt.version + " tests against Mozilla " + build
         
         if build_needed(build):
             ret = subprocess.call("$TEST_DIR/bin/builder.sh -p firefox -b " + build + " -T debug -B 'clobber checkout build'", shell=True, env={"TEST_DIR":"/work/mozilla/builds/hg.mozilla.org/sisyphus",})
