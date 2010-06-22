@@ -59,7 +59,7 @@ def run_builds(argv, opt):
 
         # Run fb_run.py with argv
         argv[-3] = os.path.join("/work/mozilla/builds/", build, "mozilla/firefox-debug/dist/bin/firefox")
-        argv[-1] = get_changeset(build)
+        argv[-1] = get_changeset(build, False)
         return fb_run.main(argv)
 
 def main(argv):
