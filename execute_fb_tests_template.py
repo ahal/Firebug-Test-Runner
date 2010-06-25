@@ -2,7 +2,7 @@ from time import sleep
 import fb_run, ConfigParser, os, subprocess, sys, optparse, urllib2
 
 # Global changeset variable
-changeset = 0
+changeset = {}
 
 def retrieve_url(url, filename):
     try:
@@ -34,7 +34,8 @@ def build_needed(build):
     # Find new changeset
     new_changeset = get_changeset(build)
     global changeset
-    if changeset != new_changeset:
+    if changeset[build] != new_changeset:
+        changeset[build] = new_changeset
         return True
     return False
 
