@@ -32,7 +32,7 @@ def build_needed(build):
 
 def run_builds(argv, opt):
     # Lookup table mapping firefox versions to builds
-    lookup = { '3.5' : '1.9.1', '3.6' : '1.9.2', '3.7' : '1.9.3' }
+    lookup = { '3.5' : '1.9.1', '3.6' : '1.9.2', '3.7' : '1.9.3', '4.0' : '2.0.0' }
     # Download test-bot.config to see which versions of Firefox to run the FBTests against
     if retrieve_url(opt.serverpath + ("" if opt.serverpath[-1] == "/" else "/") + "test-bot.config", "test-bot.config") != 0:
         return "[Error] Could not download 'test-bot.config' from '" + opt.serverpath + "'"

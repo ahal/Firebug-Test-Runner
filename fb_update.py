@@ -17,19 +17,7 @@ def create_custom_testlist(name, exceptions, version):
     file.writelines(text)
     file.close()
     
-
-def main(argv):
-    # Initialization
-    config = ConfigParser()
-    config.read("./fb-test-runner.config")
-
-    # Parse command line
-    parser = optparse.OptionParser("%prog [options]")
-    parser.add_option("-s", "--serverpath", dest="serverpath", default=config.get("update", "serverpath"), help="Path to the Apache2 document root Firebug directory")
-    parser.add_option("-t", "--testlistname", dest="testlistname", help="When specified, creates a custom testlist excluding the tests specified in the -e argument")
-    parser.add_option("-e", "--except", dest="exceptlist", help="A comma separated list of tests to exclude from the custom testlist.  The -t argument must specify a name")
-    (opt, remainder) = parser.parse_args(argv)
-
+def update(opt):
     # Grab the test_bot.config file
     os.system("wget -N http://getfirebug.com/releases/firebug/test-bot.config")
     test_bot = ConfigParser()
@@ -47,6 +35,25 @@ def main(argv):
         os.system("wget --output-document=./" + section.lower() + "/firebug.xpi" + " " + test_bot.get(section, "FIREBUG_XPI"))
         os.system("wget --output-document=./" + section.lower() + "/fbtest.xpi" + " " + test_bot.get(section, "FBTEST_XPI"))
         os.system("cp -r ./" + section.lower() + " " + opt.serverpath)
+
+
+def main(argv):
+    # Initialization
+    config = ConfigParser()
+    config.read("./fb-test-runner.config")
+
+    # Parse command line
+    parser = optparse.OptionParser("%prog [options]")
+    parser.add_option("-s", "--serverpath", dest="serverpath", default=config.get("update", "serverpath"), help="Path to the Apache2 document root Firebug directory")
+    parser.add_option("-t", "--testlistname", dest="testlistname", help="When specified, creates a custom testlist excluding the tests specified in the -e argument")
+    parser.add_option("-e", "--except", dest="exceptlist", help="A comma separated list of tests to exclude from the custom testlist.  The -t argument must specify a name")
+    (opt, remainder) = parser.parse_args(argv)
+
+    while (1):
+        print "[INFO] Updating server extensions and tests"
+        update(opt)
+        print "[INFO] Sleeping for 12 hours"
+        sleep(43200)
 
 
 if __name__ == '__main__':
