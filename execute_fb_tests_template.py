@@ -1,5 +1,5 @@
 from time import sleep
-import fb_run, ConfigParser, os, subprocess, sys, optparse, urllib2
+import fb_run, ConfigParser, os, sys, optparse, urllib2, get_latest, tarfile, shutil, dirtyutils
 
 # Global changeset variable
 changeset = {}
@@ -14,25 +14,14 @@ def retrieve_url(url, filename):
     output.close()
     return 0
 
-def get_changeset(build, checkout=True):
-    curdir = os.getcwd()
-    if build == "1.9.2":
-        os.chdir("/work/mozilla/builds/hg.mozilla.org/mozilla-1.9.2")
-    elif build == "1.9.3":
-        os.chdir("/work/mozilla/builds/hg.mozilla.org/mozilla-central")
-    else:
-        return "0"
-    if checkout:
-        subprocess.call("hg pull && hg update", shell=True, env={"PATH":"/usr/local/bin",})
-    proc = subprocess.Popen("hg tip", shell=True, stdout=subprocess.PIPE, env={"PATH":"/usr/local/bin",})
-    changeset = proc.communicate()[0]
-    os.chdir(curdir)
-    # Extract the actual changeset from the output
-    return changeset[changeset.index(":", changeset.index(":") + 1) + 1:changeset.index("\n")]
+def get_changeset(buildpath):
+    app_ini = ConfigParser.ConfigParser()
+    app_ini.read(os.path.join(buildpath, "application.ini"))
+    return app_ini.get("App", "SourceStamp")
     
 def build_needed(build):
     # Find new changeset
-    new_changeset = get_changeset(build)
+    new_changeset = get_changeset(os.path.join("/tmp/", "mozilla" + build))
     global changeset
     if not build in changeset:
         changset[build] = -1
@@ -47,6 +36,8 @@ def run_builds(argv, opt):
     # Download test-bot.config to see which versions of Firefox to run the FBTests against
     if retrieve_url(opt.serverpath + ("" if opt.serverpath[-1] == "/" else "/") + "test-bot.config", "test-bot.config") != 0:
         return "[Error] Could not download 'test-bot.config' from '" + opt.serverpath + "'"
+
+    platform = dirtyutils.get_platform()
     
     config = ConfigParser.ConfigParser()
     config.read("test-bot.config")
@@ -56,18 +47,22 @@ def run_builds(argv, opt):
     for build in builds:
         build = lookup[build]
         print "[Info] Running Firebug" + opt.version + " tests against Mozilla " + build
-        
-        if build_needed(build):
-            ret = subprocess.call("$TEST_DIR/bin/builder.sh -p firefox -b " + build + " -T debug -B 'clobber checkout build'", shell=True, env={"TEST_DIR":"/work/mozilla/builds/hg.mozilla.org/sisyphus",})
-            if ret != 0:
-                return "[Error] Failure while building Mozilla " + build
 
-        # Run fb_run.py with argv
-        argv[-3] = os.path.join("/work/mozilla/builds/", build, "mozilla/firefox-debug/dist/bin/firefox")
-        argv[-1] = get_changeset(build, False)
-        ret = fb_run.main(argv)
-        if ret != 0:
-            print ret
+        # Scrape for the latest tinderbox build and extract it to the tmp directory
+        retrieve_url(get_latest.main(["--product=mozilla-" + (build if build != "1.9.3" else "central"), "-p", platform["name"].lower() + platform["bits"]]), "/tmp/mozilla" + build + ".tar.bz2")
+        tar = tarfile.open(os.path.join("/tmp/mozilla" + build + ".tar.bz2"))
+        tar.extractall(os.path.join("/tmp/mozilla" + build))
+        tar.close()
+        if build_needed(build):
+            # Run fb_run.py with argv
+            argv[-3] = os.path.join("/tmp/mozilla" + build + "/firefox")
+            argv[-1] = get_changeset(os.path.join("/tmp/mozilla" + build))
+            ret = fb_run.main(argv)
+            if ret != 0:
+                print ret
+        # Remove build directories
+        os.remove(os.path.join("/tmp/mozilla" + build + ".tar.bz2"))
+        shutil.rmtree(os.path.join("/tmp/mozilla" + build))
     return 0
 
 def main(argv):
