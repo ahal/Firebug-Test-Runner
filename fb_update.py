@@ -2,6 +2,7 @@
 ## This script will grab all of the latest firebug releases, as well as 
 ## the fbtests and testlists and store them on the specified webserver
 from ConfigParser import ConfigParser
+from time import sleep
 import os, sys, optparse
 
 def create_custom_testlist(name, exceptions, version):
