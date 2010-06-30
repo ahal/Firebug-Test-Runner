@@ -24,7 +24,7 @@ def build_needed(build, buildpath):
     new_changeset = get_changeset(buildpath)
     global changeset
     if not build in changeset:
-        changset[build] = -1
+        changeset[build] = -1
     if changeset[build] != new_changeset:
         changeset[build] = new_changeset
         return True
