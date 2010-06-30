@@ -1,5 +1,5 @@
 from time import sleep
-import fb_run, ConfigParser, os, sys, optparse, urllib2, get_latest, tarfile, shutil, dirtyutils
+import fb_run, ConfigParser, os, sys, optparse, urllib2, get_latest, tarfile, shutil
 
 # Global changeset variable
 changeset = {}
@@ -37,7 +37,7 @@ def run_builds(argv, opt):
     if retrieve_url(opt.serverpath + ("" if opt.serverpath[-1] == "/" else "/") + "test-bot.config", "test-bot.config") != 0:
         return "[Error] Could not download 'test-bot.config' from '" + opt.serverpath + "'"
 
-    platform = dirtyutils.get_platform()
+    basedir = "/tmp"
     
     config = ConfigParser.ConfigParser()
     config.read("test-bot.config")
@@ -49,21 +49,21 @@ def run_builds(argv, opt):
         print "[Info] Running Firebug" + opt.version + " tests against Mozilla " + build
 
         # Scrape for the latest tinderbox build and extract it to the tmp directory
-        retrieve_url(get_latest.main(["--product=mozilla-" + (build if build != "1.9.3" else "central")]), "/tmp/mozilla-" + build + ".tar.bz2")
-        tar = tarfile.open(os.path.join("/tmp/mozilla-" + build + ".tar.bz2"))
-        tar.extractall(os.path.join("/tmp/mozilla-" + build))
+        retrieve_url(get_latest.main(["--product=mozilla-" + (build if build != "1.9.3" else "central")]), os.path.join(basedir, "mozilla-" + build + ".tar.bz2"))
+        tar = tarfile.open(os.path.join(basedir, "mozilla-" + build + ".tar.bz2"))
+        tar.extractall(os.path.join(basedir, "mozilla-" + build))
         tar.close()
-        if build_needed(build, "/tmp/mozilla-" + build + "/firefox/"):
+        if build_needed(build, os.path.join(basedir, "mozilla-" + build + "/firefox/")):
             # Run fb_run.py with argv
             global changeset
-            argv[-3] = os.path.join("/tmp/mozilla-" + build + "/firefox/firefox")
+            argv[-3] = os.path.join(basedir, "mozilla-" + build + "/firefox/firefox")
             argv[-1] = changeset[build]
             ret = fb_run.main(argv)
             if ret != 0:
                 print ret
         # Remove build directories
-        os.remove(os.path.join("/tmp/mozilla-" + build + ".tar.bz2"))
-        shutil.rmtree(os.path.join("/tmp/mozilla-" + build))
+        os.remove(os.path.join(basedir, "mozilla-" + build + ".tar.bz2"))
+        shutil.rmtree(os.path.join(basedir, "mozilla-" + build))
     return 0
 
 def main(argv):
