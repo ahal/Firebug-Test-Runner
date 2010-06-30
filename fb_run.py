@@ -81,8 +81,8 @@ def main(argv):
 
     # Find the log file
     timeout, file = 0, 0
-    # Wait up to a minute for the log file to be initialized
-    while not file and timeout < 60:
+    # Wait up to 5 minutes for the log file to be initialized
+    while not file and timeout < 300:
         try:
             for name in os.listdir(os.path.join(profile.profile, "firebug/fbtest/logs")):
                 file = open(os.path.join(profile.profile, "firebug/fbtest/logs/", name))
@@ -92,7 +92,7 @@ def main(argv):
     if not file:
         cleanup()
         mozrunner.kill_process_by_name("firefox-bin")
-        return "[Error] Could not find the log file in profile '" + profile + "'"
+        return "[Error] Could not find the log file in profile '" + profile.profile + "'"
 
 
     # Send the log file to fb_logs.py, exit when fbtests are finished
