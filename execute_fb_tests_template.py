@@ -19,9 +19,9 @@ def get_changeset(buildpath):
     app_ini.read(os.path.join(buildpath, "application.ini"))
     return app_ini.get("App", "SourceStamp")
     
-def build_needed(build):
+def build_needed(build, buildpath):
     # Find new changeset
-    new_changeset = get_changeset(os.path.join("/tmp/", "mozilla" + build))
+    new_changeset = get_changeset(buildpath)
     global changeset
     if not build in changeset:
         changset[build] = -1
@@ -49,20 +49,21 @@ def run_builds(argv, opt):
         print "[Info] Running Firebug" + opt.version + " tests against Mozilla " + build
 
         # Scrape for the latest tinderbox build and extract it to the tmp directory
-        retrieve_url(get_latest.main(["--product=mozilla-" + (build if build != "1.9.3" else "central"), "-p", platform["name"].lower() + platform["bits"]]), "/tmp/mozilla" + build + ".tar.bz2")
-        tar = tarfile.open(os.path.join("/tmp/mozilla" + build + ".tar.bz2"))
-        tar.extractall(os.path.join("/tmp/mozilla" + build))
+        retrieve_url(get_latest.main(["--product=mozilla-" + (build if build != "1.9.3" else "central")]), "/tmp/mozilla-" + build + ".tar.bz2")
+        tar = tarfile.open(os.path.join("/tmp/mozilla-" + build + ".tar.bz2"))
+        tar.extractall(os.path.join("/tmp/mozilla-" + build))
         tar.close()
-        if build_needed(build):
+        if build_needed(build, "/tmp/mozilla-" + build + "/firefox/"):
             # Run fb_run.py with argv
-            argv[-3] = os.path.join("/tmp/mozilla" + build + "/firefox")
-            argv[-1] = get_changeset(os.path.join("/tmp/mozilla" + build))
+            global changeset
+            argv[-3] = os.path.join("/tmp/mozilla-" + build + "/firefox/firefox")
+            argv[-1] = changeset[build]
             ret = fb_run.main(argv)
             if ret != 0:
                 print ret
         # Remove build directories
-        os.remove(os.path.join("/tmp/mozilla" + build + ".tar.bz2"))
-        shutil.rmtree(os.path.join("/tmp/mozilla" + build))
+        os.remove(os.path.join("/tmp/mozilla-" + build + ".tar.bz2"))
+        shutil.rmtree(os.path.join("/tmp/mozilla-" + build))
     return 0
 
 def main(argv):

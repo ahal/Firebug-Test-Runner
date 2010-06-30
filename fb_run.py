@@ -91,6 +91,7 @@ def main(argv):
             mozrunner.sleep(1)
     if not file:
         cleanup()
+        mozrunner.kill_process_by_name("firefox-bin")
         return "[Error] Could not find the log file in profile '" + profile + "'"
 
 
