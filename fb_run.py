@@ -95,12 +95,13 @@ def main(argv):
         return "[Error] Could not find the log file in profile '" + profile.profile + "'"
 
 
-    # Send the log file to fb_logs.py, exit when fbtests are finished
-    line = ""
-    while line.find("Test Suite Finished") == -1:
+    # Send the log file to fb_logs.py, exit when fbtests are finished (wait up to 30 min)
+    line, timeout = "", 0
+    while line.find("Test Suite Finished") == -1 and timeout < 1800:
         line = file.readline()
         if line == "":
-            mozrunner.sleep(1)        
+            mozrunner.sleep(1)
+            timeout += 1;
     # Give last two lines of file a chance to write    
     mozrunner.sleep(2)
     print "[Info] Sending log file to couchdb at '" + opt.couchserveruri + "'"
