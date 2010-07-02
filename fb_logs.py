@@ -65,6 +65,8 @@ def main(argv):
                     testheaderdoc["App Changeset"] = options.changeset
                     testheaderdoc["CPU Architecture"] = platform["cpu"]
                     testheaderdoc["OS Detailed Name"] = platform["version"]
+                    if not "OS Name" in testheaderdoc:
+                        testheaderdoc["OS Name"] = platform["name"]
 
             match = reFirebugStart.match(logline)
             if match:
