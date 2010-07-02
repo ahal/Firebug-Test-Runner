@@ -38,6 +38,7 @@ def create_log(profile, opt):
     content.append("FIREBUG INFO | Export Date: " + datetime.datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S GMT") + "\n")
     content.append("FIREBUG INFO | Test Suite: " + opt.serverpath + "/tests/content/testlists/" + opt.testlist + "\n")
     content.append("FIREBUG INFO | Total Tests: 0\n")
+    content.append("FIREBUG INFO | Fail | [START] Could not start FBTests\n")
     file.writelines(content)
     return file
     
