@@ -10,7 +10,7 @@ def cleanup():
         os.remove("firebug.xpi")
     if os.path.exists("fbtest.xpi"):
         os.remove("fbtest.xpi")
-    if os.path.exists("test-bot.config")
+    if os.path.exists("test-bot.config"):
         os.remove("test-bot.config")
         
 def retrieve_url(url, filename):
