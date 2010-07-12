@@ -35,7 +35,7 @@ def create_log(profile, opt):
         file = open(os.path.join(profile, "extensions/firebug@software.joehewitt.com/install.rdf"))
         content.append("FIREBUG INFO | Firebug: " + parse_rdf(file.readlines(), "version") + "\n")
         file = open(os.path.join(profile, "extensions/fbtest@mozilla.com/install.rdf"))
-        content.append("FIREBUG INFO | FBTest: " + parse_rd(file.readlines(), "version") + "\n")
+        content.append("FIREBUG INFO | FBTest: " + parse_rdf(file.readlines(), "version") + "\n")
         parser = ConfigParser()
         parser.read(os.path.join(opt.binary[0:opt.binary.rfind("/")], "application.ini"))
         content.append("FIREBUG INFO | App Name: " + parser.get("App", "Name") + "\n")
