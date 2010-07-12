@@ -3,6 +3,7 @@
 from ConfigParser import ConfigParser
 from optparse import OptionParser
 import os, sys, mozrunner, urllib2, fb_logs, datetime
+
 def cleanup():
     "Perform cleanup and exit"
     if os.path.exists("firebug.xpi"):
@@ -20,17 +21,20 @@ def retrieve_url(url, filename):
     output.close()
     return 0
 
+def parse_rdf(lines, tagname):
+    for line in lines:
+        if line.find("<em:" + tagname + ">") != -1:
+            print line[line.find(">") + 1:line.rfind("<")]
+    return -1
+
 def create_log(profile, opt):
     try:
-        file = open(os.path.join(profile, "firebug/firebug-test.log"), "w")
-        retrieve_url(opt.serverpath[0:opt.serverpath.find("firebug") - 1] + "test-bot.config", "test-bot.config")
-        parser = ConfigParser()
-        parser.read("test-bot.config")
         content = []
-        value = parser.get("Firebug" + opt.version, "FIREBUG_XPI")
-        content.append("FIREBUG INFO | Firebug: " + value[value.rfind("/") + 9:-4] + "\n")
-        value = parser.get("Firebug" + opt.version, "FBTEST_XPI")
-        content.append("FIREBUG INFO | FBTest: " + value[value.rfind("/") + 8:-4] + "\n")
+        file = open(os.path.join(profile, "extensions/firebug@software.joehewitt.com/install.rdf"))
+        content.append("FIREBUG INFO | Firebug: " + parse_rdf(file.readlines(), "version") + "\n")
+        file = open(os.path.join(profile, "extensions/fbtest@mozilla.com/install.rdf"))
+        content.append("FIREBUG INFO | FBTest: " + parse_rd(file.readlines(), "version") + "\n")
+        parser = ConfigParser()
         parser.read(os.path.join(opt.binary[0:opt.binary.rfind("/")], "application.ini"))
         content.append("FIREBUG INFO | App Name: " + parser.get("App", "Name") + "\n")
         content.append("FIREBUG INFO | App Version: " + parser.get("App", "Version") + "\n")
@@ -40,6 +44,7 @@ def create_log(profile, opt):
         content.append("FIREBUG INFO | Test Suite: " + opt.serverpath + "/tests/content/testlists/" + opt.testlist + "\n")
         content.append("FIREBUG INFO | Total Tests: 0\n")
         content.append("FIREBUG INFO | Fail | [START] Could not start FBTests\n")
+        file = open(os.path.join(profile, "firebug/firebug-test.log"), "w")        
         file.writelines(content)
         return file
     except:
