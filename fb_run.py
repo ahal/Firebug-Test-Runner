@@ -26,7 +26,7 @@ def retrieve_url(url, filename):
 def parse_rdf(lines, tagname):
     for line in lines:
         if line.find("<em:" + tagname + ">") != -1:
-            print line[line.find(">") + 1:line.rfind("<")]
+            return line[line.find(">") + 1:line.rfind("<")]
     return -1
 
 def create_log(profile, opt):
@@ -145,7 +145,6 @@ def main(argv):
             return "[Error] Log file not sent to couchdb at server: '" + opt.couchserveruri + "' and database: '" + opt.databasename + "'" 
         
     # Cleanup
-    file.close()
     mozrunner.kill_process_by_name("firefox-bin")
     cleanup()
     return 0
