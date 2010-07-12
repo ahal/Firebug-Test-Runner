@@ -21,26 +21,29 @@ def retrieve_url(url, filename):
     return 0
 
 def create_log(profile, opt):
-    file = open(os.path.join(profile, "firebug/firebug-test.log"), "w")
-    retrieve_url(opt.serverpath[0:opt.serverpath.find("firebug") - 1] + "test-bot.config", "test-bot.config")
-    parser = ConfigParser()
-    parser.read("test-bot.config")
-    content = []
-    value = parser.get("Firebug" + opt.version, "FIREBUG_XPI")
-    content.append("FIREBUG INFO | Firebug: " + value[value.rfind("/") + 9:-4] + "\n")
-    value = parser.get("Firebug" + opt.version, "FBTEST_XPI")
-    content.append("FIREBUG INFO | FBTest: " + value[value.rfind("/") + 8:-4] + "\n")
-    parser.read(os.path.join(opt.binary[0:opt.binary.rfind("/")], "application.ini"))
-    content.append("FIREBUG INFO | App Name: " + parser.get("App", "Name") + "\n")
-    content.append("FIREBUG INFO | App Version: " + parser.get("App", "Version") + "\n")
-    content.append("FIREBUG INFO | App Platform: " + parser.get("Gecko", "MaxVersion") + "\n")
-    content.append("FIREBUG INFO | App BuildID: " + parser.get("App", "BuildID") + "\n")
-    content.append("FIREBUG INFO | Export Date: " + datetime.datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S GMT") + "\n")
-    content.append("FIREBUG INFO | Test Suite: " + opt.serverpath + "/tests/content/testlists/" + opt.testlist + "\n")
-    content.append("FIREBUG INFO | Total Tests: 0\n")
-    content.append("FIREBUG INFO | Fail | [START] Could not start FBTests\n")
-    file.writelines(content)
-    return file
+    try:
+        file = open(os.path.join(profile, "firebug/firebug-test.log"), "w")
+        retrieve_url(opt.serverpath[0:opt.serverpath.find("firebug") - 1] + "test-bot.config", "test-bot.config")
+        parser = ConfigParser()
+        parser.read("test-bot.config")
+        content = []
+        value = parser.get("Firebug" + opt.version, "FIREBUG_XPI")
+        content.append("FIREBUG INFO | Firebug: " + value[value.rfind("/") + 9:-4] + "\n")
+        value = parser.get("Firebug" + opt.version, "FBTEST_XPI")
+        content.append("FIREBUG INFO | FBTest: " + value[value.rfind("/") + 8:-4] + "\n")
+        parser.read(os.path.join(opt.binary[0:opt.binary.rfind("/")], "application.ini"))
+        content.append("FIREBUG INFO | App Name: " + parser.get("App", "Name") + "\n")
+        content.append("FIREBUG INFO | App Version: " + parser.get("App", "Version") + "\n")
+        content.append("FIREBUG INFO | App Platform: " + parser.get("Gecko", "MaxVersion") + "\n")
+        content.append("FIREBUG INFO | App BuildID: " + parser.get("App", "BuildID") + "\n")
+        content.append("FIREBUG INFO | Export Date: " + datetime.datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S GMT") + "\n")
+        content.append("FIREBUG INFO | Test Suite: " + opt.serverpath + "/tests/content/testlists/" + opt.testlist + "\n")
+        content.append("FIREBUG INFO | Total Tests: 0\n")
+        content.append("FIREBUG INFO | Fail | [START] Could not start FBTests\n")
+        file.writelines(content)
+        return file
+    except:
+        return -1
     
 
 def main(argv): 
@@ -104,7 +107,7 @@ def main(argv):
     # Find the log file
     timeout, file = 0, 0
     # Wait up to 5 minutes for the log file to be initialized
-    while not file and timeout < 10:
+    while not file and timeout < 300:
         try:
             for name in os.listdir(os.path.join(profile.profile, "firebug/fbtest/logs")):
                 file = open(os.path.join(profile.profile, "firebug/fbtest/logs/", name))
@@ -126,23 +129,13 @@ def main(argv):
                 timeout += 1;
                 
     # Give last two lines of file a chance to write and send log file to fb_logs.py  
-    mozrunner.sleep(2)
-    print "[Info] Sending log file to couchdb at '" + opt.couchserveruri + "'"
-    if fb_logs.main(["--log", file.name, "--database", opt.databasename, "--couch", opt.couchserveruri, "--changeset", opt.changeset]) != 0:
-        return "[Error] Log file not sent to couchdb at server: '" + opt.couchserveruri + "' and database: '" + opt.databasename + "'" 
-    
-## This will be needed for buildbot integration later on
-##        line = file.readline()
-##        if (line != ""):
-##            print line[:-1]
-##        else:
-##            mozrunner.sleep(1)
-##            
-##    # Ensure we have retrieved the entire log file
-##    line = file.readline()
-##    while line != "":
-##        print line[:-1]
-##        line = file.readline()
+    if file != -1:
+        mozrunner.sleep(2)
+        filename = file.name
+        file.close()
+        print "[Info] Sending log file to couchdb at '" + opt.couchserveruri + "'"
+        if fb_logs.main(["--log", filename, "--database", opt.databasename, "--couch", opt.couchserveruri, "--changeset", opt.changeset]) != 0:
+            return "[Error] Log file not sent to couchdb at server: '" + opt.couchserveruri + "' and database: '" + opt.databasename + "'" 
         
     # Cleanup
     file.close()
