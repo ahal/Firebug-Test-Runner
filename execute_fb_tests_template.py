@@ -89,11 +89,14 @@ def run_builds(argv, opt):
         build = lookup[build]
         print "[Info] Running Firebug" + opt.version + " tests against Mozilla " + build
 
-        # Scrape for the latest tinderbox build and extract it to the tmp directory
-        retrieve_url(get_latest.main(["--product=mozilla-" + (build if build != "1.9.3" else "central")]), os.path.join(basedir, "mozilla-" + build + ".tar.bz2"))
-        tar = tarfile.open(os.path.join(basedir, "mozilla-" + build + ".tar.bz2"))
-        tar.extractall(os.path.join(basedir, "mozilla-" + build))
-        tar.close()
+        try:
+            # Scrape for the latest tinderbox build and extract it to the tmp directory
+            retrieve_url(get_latest.main(["--product=mozilla-" + (build if build != "1.9.3" else "central")]), os.path.join(basedir, "mozilla-" + build + ".tar.bz2"))
+            tar = tarfile.open(os.path.join(basedir, "mozilla-" + build + ".tar.bz2"))
+            tar.extractall(os.path.join(basedir, "mozilla-" + build))
+            tar.close()
+        except IOError:
+            return "[Error] Could not grab the latest tinderbox build"
         if build_needed(build, os.path.join(basedir, "mozilla-" + build + "/firefox/")):
             # Run fb_run.py with argv
             global changeset

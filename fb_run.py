@@ -144,9 +144,13 @@ def main(argv):
 
     # Create profile for mozrunner and start the Firebug tests
     print "[Info] Starting FBTests"
-    profile = mozrunner.FirefoxProfile(profile=opt.profile, create_new=(True if opt.profile==None else False), addons=["firebug.xpi", "fbtest.xpi"])
-    runner = mozrunner.FirefoxRunner(binary=opt.binary, profile=profile, cmdargs=["-runFBTests", opt.serverpath + "/tests/content/testlists/" + opt.testlist], env=dict)
-    runner.start()
+    try:
+        profile = mozrunner.FirefoxProfile(profile=opt.profile, create_new=(True if opt.profile==None else False), addons=["firebug.xpi", "fbtest.xpi"])
+        runner = mozrunner.FirefoxRunner(binary=opt.binary, profile=profile, cmdargs=["-runFBTests", opt.serverpath + "/tests/content/testlists/" + opt.testlist], env=dict)
+        runner.start()
+    except IOError:
+        cleanup()
+        return "[Error] Could not download the firebug extensions"
 
     # Find the log file
     timeout, file = 0, 0
