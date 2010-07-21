@@ -90,7 +90,6 @@ def create_log(profile, opt):
         return -1
     
 def disable_crashreporter(binary_path):
-    print binary_path
     try:    
         parser = ConfigParser()
         parser.read(os.path.join(binary_path, "application.ini"))
@@ -230,12 +229,6 @@ def main(argv):
     parser.add_option("--changeset", dest="changeset")
     (opt, remainder) = parser.parse_args(argv)
     
-    print opt.binary
-    # Disable crash reporter
-    if disable_crashreporter(opt.binary[0:opt.binary.rfind("/") if opt.binary.rfind("/") != -1 else opt.binary.rfind("\\")]) != 0:
-        print "[Warn] Could not disable crash reporter"
-
-    sys.exit(0)
     return run_test(opt)
 
 
