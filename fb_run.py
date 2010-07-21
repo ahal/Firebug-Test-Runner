@@ -89,47 +89,9 @@ def create_log(profile, opt):
     except:
         return -1
     
-
-def main(argv): 
-    # Initialization
-    config = ConfigParser()
-    try:
-        config.read("fb-test-runner.config")
-    except ConfigParser.NoSectionError:
-        print "[Warn] Could not find 'fb-test-runner.config' in local directory"
-        file = open("fb-test-runner.config", "w")
-        file.close()
-        config.read("fb-test-runner.config")
-
-    parser = OptionParser("usage: %prog [options]")
-    parser.add_option("-b", "--binary", dest="binary", 
-                      help="Firefox binary path")
-                    
-    parser.add_option("-p", "--profile", dest="profile", 
-                      help="The profile to use when running Firefox")
-                        
-    parser.add_option("-s", "--serverpath", dest="serverpath", 
-                      default=config.get("run", "serverpath"),
-                      help="The http server containing the fb tests")
-                        
-    parser.add_option("-v", "--version", dest="version",
-                      default=config.get("run", "firebug_version"),
-                      help="The firebug version to run")
-                        
-    parser.add_option("-c", "--couch", dest="couchserveruri",
-                      default=config.get("log", "couch_server"),
-                      help="URI to couchdb server for log information")
-                        
-    parser.add_option("-d", "--database", dest="databasename",
-                      default=config.get("log", "database_name"),
-                      help="Database name to keep log information")
-                        
-    parser.add_option("-t", "--testlist", dest="testlist",
-                      help="Specify the name of the testlist to use, should usually use the default")
-                        
-    parser.add_option("--changeset", dest="changeset")
-    (opt, remainder) = parser.parse_args(argv)
-
+    
+    
+def run_test(opt):
     if opt.testlist == None:
         opt.testlist = "firebug" + opt.version + ".html"
 
@@ -163,8 +125,11 @@ def main(argv):
     # Create profile for mozrunner and start the Firebug tests
     print "[Info] Starting FBTests"
     try:
-        profile = mozrunner.FirefoxProfile(profile=opt.profile, create_new=(True if opt.profile==None else False), addons=["firebug.xpi", "fbtest.xpi"])
-        runner = mozrunner.FirefoxRunner(binary=opt.binary, profile=profile, cmdargs=["-runFBTests", opt.serverpath + "/tests/content/testlists/" + opt.testlist], env=dict)
+        profile = mozrunner.FirefoxProfile(profile=opt.profile, create_new=(True if opt.profile==None else False),
+                                           addons=["firebug.xpi", "fbtest.xpi"])
+                                        
+        runner = mozrunner.FirefoxRunner(binary=opt.binary, profile=profile, 
+                                         cmdargs=["-runFBTests", opt.serverpath + "/tests/content/testlists/" + opt.testlist], env=dict)
         runner.start()
     except IOError:
         cleanup()
@@ -207,6 +172,50 @@ def main(argv):
     mozrunner.kill_process_by_name("firefox-bin")
     cleanup()
     return 0
+
+def main(argv): 
+    # Initialization
+    config = ConfigParser()
+    try:
+        config.read("fb-test-runner.config")
+    except ConfigParser.NoSectionError:
+        print "[Warn] Could not find 'fb-test-runner.config' in local directory"
+        file = open("fb-test-runner.config", "w")
+        file.close()
+        config.read("fb-test-runner.config")
+
+    parser = OptionParser("usage: %prog [options]")
+    parser.add_option("-b", "--binary", dest="binary", 
+                      help="Firefox binary path")
+                    
+    parser.add_option("-p", "--profile", dest="profile", 
+                      help="The profile to use when running Firefox")
+                        
+    parser.add_option("-s", "--serverpath", dest="serverpath", 
+                      default=config.get("run", "serverpath"),
+                      help="The http server containing the fb tests")
+                        
+    parser.add_option("-v", "--version", dest="version",
+                      default=config.get("run", "firebug_version"),
+                      help="The firebug version to run")
+                        
+    parser.add_option("-c", "--couch", dest="couchserveruri",
+                      default=config.get("log", "couch_server"),
+                      help="URI to couchdb server for log information")
+                        
+    parser.add_option("-d", "--database", dest="databasename",
+                      default=config.get("log", "database_name"),
+                      help="Database name to keep log information")
+                        
+    parser.add_option("-t", "--testlist", dest="testlist",
+                      help="Specify the name of the testlist to use, should usually use the default")
+                        
+    parser.add_option("--changeset", dest="changeset")
+    (opt, remainder) = parser.parse_args(argv)
+    
+    return run_test(opt)
+
+
     
 if __name__ == '__main__':
     main(sys.argv[1:])
