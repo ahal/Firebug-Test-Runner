@@ -113,12 +113,23 @@ def run_builds(argv, opt):
 def main(argv):
     usage = "%prog [options]"
     parser = optparse.OptionParser(usage)
-    parser.add_option("-p", "--profile", dest="profile", help="The profile to use when running Firefox")
-    parser.add_option("-s", "--serverpath", dest="serverpath", help="The http server containing the fb tests")
-    parser.add_option("-v", "--version", dest="version", help="The firebug version to run")
-    parser.add_option("-c", "--couch", dest="couchserveruri", help="URI to couchdb server for log information")
-    parser.add_option("-d", "--database", dest="databasename", help="Database name to keep log information")
-    parser.add_option("-t", "--testlist", dest="testlist", help="Testlist to use. Should use default")
+    parser.add_option("-p", "--profile", dest="profile",
+                      help="The profile to use when running Firefox")
+                        
+    parser.add_option("-s", "--serverpath", dest="serverpath",
+                      help="The http server containing the fb tests")
+                        
+    parser.add_option("-v", "--version", dest="version",
+                      help="The firebug version to run")
+                        
+    parser.add_option("-c", "--couch", dest="couchserveruri",
+                      help="URI to couchdb server for log information")
+                        
+    parser.add_option("-d", "--database", dest="databasename",
+                      help="Database name to keep log information")
+                        
+    parser.add_option("-t", "--testlist", dest="testlist",
+                      help="Testlist to use. Should use default")
     (opt, remainder) = parser.parse_args(argv)
     # Synthesize arguments to be passed to fb_run
     argv.append("-b")

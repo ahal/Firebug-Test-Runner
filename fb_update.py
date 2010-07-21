@@ -59,32 +59,44 @@ def update(opt):
     # Grab the test_bot.config file
     os.system("wget -N http://getfirebug.com/releases/firebug/test-bot.config")
     test_bot = ConfigParser()
-    test_bot.read(os.getcwd() + "/test-bot.config")
+    test_bot.read("test-bot.config")
     # For each section in the config file, download the specified files and move them to the webserver
     for section in test_bot.sections():
-        if not os.path.isdir(os.path.curdir + section + "/.svn"):
-            os.system("svn co http://fbug.googlecode.com/svn/tests/" + " " + os.getcwd() + "/" + section.lower() + "/tests -r " + test_bot.get(section, "SVN_REVISION"))
+        if not os.path.isdir(os.path.join(section.lower(), ".svn")):
+            os.system("svn co http://fbug.googlecode.com/svn/tests/" + " " + os.path.join(section.lower(), "tests") + " -r " + test_bot.get(section, "SVN_REVISION"))
         else:
-            os.system(section.lower() + "/svn update -r " + test_bot.get(section, "SVN_REVISION"))
+            os.system(os.path.join(section.lower(), "svn") + " update -r " + test_bot.get(section, "SVN_REVISION"))
             
         # Create custom testlist
-        if not opt.testlistname == None:            
+        if opt.testlistname != None:            
             create_custom_testlist(opt.testlistname, opt.exceptlist.split(","), section[-3:])
-        os.system("wget --output-document=./" + section.lower() + "/firebug.xpi" + " " + test_bot.get(section, "FIREBUG_XPI"))
-        os.system("wget --output-document=./" + section.lower() + "/fbtest.xpi" + " " + test_bot.get(section, "FBTEST_XPI"))
-        os.system("cp -r ./" + section.lower() + " " + opt.serverpath)
+        os.system("wget --output-document=" + os.path.join(section.lower(), "firebug.xpi") + " " + test_bot.get(section, "FIREBUG_XPI"))
+        os.system("wget --output-document=" + os.path.join(section.lower(), "fbtest.xpi") + " " + test_bot.get(section, "FBTEST_XPI"))
+        os.system("cp -r " + section.lower() + " " + opt.serverpath)
 
 
 def main(argv):
     # Initialization
     config = ConfigParser()
-    config.read("./fb-test-runner.config")
+    try:
+        config.read("fb-test-runner.config")
+    except ConfigParser.NoSectionError:
+        print "[Warn] Could not find 'fb-test-runner.config' in local directory"
+        file = open("fb-test-runner.config", "w")
+        file.close()
+        config.read("fb-test-runner.config")
 
     # Parse command line
     parser = optparse.OptionParser("%prog [options]")
-    parser.add_option("-s", "--serverpath", dest="serverpath", default=config.get("update", "serverpath"), help="Path to the Apache2 document root Firebug directory")
-    parser.add_option("-t", "--testlistname", dest="testlistname", help="When specified, creates a custom testlist excluding the tests specified in the -e argument")
-    parser.add_option("-e", "--except", dest="exceptlist", help="A comma separated list of tests to exclude from the custom testlist.  The -t argument must specify a name")
+    parser.add_option("-s", "--serverpath", dest="serverpath",
+                      default=config.get("update", "serverpath"),
+                      help="Path to the Apache2 document root Firebug directory")
+                        
+    parser.add_option("-t", "--testlistname", dest="testlistname",
+                      help="When specified, creates a custom testlist excluding the tests specified in the -e argument")
+                        
+    parser.add_option("-e", "--except", dest="exceptlist",
+                      help="A comma separated list of tests to exclude from the custom testlist.  The -t argument must specify a name")
     (opt, remainder) = parser.parse_args(argv)
 
     while (1):
