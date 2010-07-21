@@ -74,7 +74,7 @@ def create_log(profile, opt):
         file = open(os.path.join(profile, "extensions/fbtest@mozilla.com/install.rdf"))
         content.append("FIREBUG INFO | FBTest: " + parse_rdf(file.readlines(), "version") + "\n")
         parser = ConfigParser()
-        parser.read(os.path.join(opt.binary[0:opt.binary.rfind("/")], "application.ini"))
+        parser.read(os.path.join(opt.binary[0:opt.binary.rfind("/") if opt.binary.rfind("/") != -1 else opt.binary.rfind("\\")], "application.ini"))
         content.append("FIREBUG INFO | App Name: " + parser.get("App", "Name") + "\n")
         content.append("FIREBUG INFO | App Version: " + parser.get("App", "Version") + "\n")
         content.append("FIREBUG INFO | App Platform: " + parser.get("Gecko", "MaxVersion") + "\n")
@@ -89,7 +89,20 @@ def create_log(profile, opt):
     except:
         return -1
     
-    
+def disable_crashreporter(binary_path):
+    print binary_path
+    try:    
+        parser = ConfigParser()
+        parser.read(os.path.join(binary_path, "application.ini"))
+        if parser.has_option("Crash Reporter", "Enabled"):
+            parser.set("Crash Reporter", "Enabled", 0)
+            file = open(os.path.join(binary_path, "application.ini"), "w")
+            parser.write(file)
+            file.close()
+            return 0
+    except:
+        pass
+    return -1
     
 def run_test(opt):
     if opt.testlist == None:
@@ -121,6 +134,10 @@ def run_test(opt):
     # Create environment variables
     dict = os.environ
     dict["XPC_DEBUG_WARN"] = "warn"
+
+    # Disable crash reporter
+    if disable_crashreporter(opt.binary[0:opt.binary.rfind("/") if opt.binary.rfind("/") != -1 else opt.binary.rfind("\\")]) != 0:
+        print "[Warn] Could not disable crash reporter"
 
     # Create profile for mozrunner and start the Firebug tests
     print "[Info] Starting FBTests"
@@ -213,6 +230,12 @@ def main(argv):
     parser.add_option("--changeset", dest="changeset")
     (opt, remainder) = parser.parse_args(argv)
     
+    print opt.binary
+    # Disable crash reporter
+    if disable_crashreporter(opt.binary[0:opt.binary.rfind("/") if opt.binary.rfind("/") != -1 else opt.binary.rfind("\\")]) != 0:
+        print "[Warn] Could not disable crash reporter"
+
+    sys.exit(0)
     return run_test(opt)
 
 
