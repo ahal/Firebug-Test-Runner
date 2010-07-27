@@ -41,6 +41,15 @@ import fb_run, ConfigParser, os, sys, optparse, urllib2, get_latest, tarfile, sh
 # Global changeset variable
 changeset = {}
 
+# Clean the temporary folder
+def clean_temp_folder(basedir):
+    try:
+        for filename in os.listdir(basedir):
+            if os.isdir(os.path.join(basedir, filename)) and filename[0:3] == "tmp":
+                shutil(os.path.join(basedir,filename))
+    except:
+        return -1
+
 # Save the file located at 'url' into 'filename'
 def retrieve_url(url, filename):
     try:
@@ -71,14 +80,12 @@ def build_needed(build, buildpath):
         return True
     return False
 
-def run_builds(argv, opt):
+def run_builds(argv, opt, basedir):
     # Lookup table mapping firefox versions to builds
     lookup = { '3.5' : '1.9.1', '3.6' : '1.9.2', '3.7' : '1.9.3', '4.0' : '2.0.0' }
     # Download test-bot.config to see which versions of Firefox to run the FBTests against
     if retrieve_url(opt.serverpath + ("" if opt.serverpath[-1] == "/" else "/") + "test-bot.config", "test-bot.config") != 0:
         return "[Error] Could not download 'test-bot.config' from '" + opt.serverpath + "'"
-
-    basedir = "/tmp"
     
     config = ConfigParser.ConfigParser()
     config.read("test-bot.config")
@@ -137,13 +144,19 @@ def main(argv):
     argv.append("--changeset")
     argv.append("changeset")        # Placeholder
     
+    basedir = "/tmp"
+    
+    i = 0
     while True:
         print "[Info] Starting builds and FBTests for Firebug" + opt.version
-        ret = run_builds(argv, opt)
+        ret = run_builds(argv, opt, basedir)
         if ret != 0:
             print ret
-        print "[Info] Sleeping for 1 hour"
-        sleep(3600)
+        if i % 6 == 0:
+            clean_temp_folder(basedir)
+        i += 1
+        print "[Info] Sleeping for 4 hour"
+        sleep(14400)
         
     
 if __name__ == '__main__':

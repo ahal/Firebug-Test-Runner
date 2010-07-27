@@ -90,7 +90,7 @@ def create_log(profile, opt):
         return -1
     
 def disable_crashreporter(binary_path):
-    try:    
+    try:
         parser = ConfigParser()
         parser.read(os.path.join(binary_path, "application.ini"))
         if parser.has_option("Crash Reporter", "Enabled"):
