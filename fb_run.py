@@ -185,6 +185,7 @@ def run_test(opt):
             return "[Error] Log file not sent to couchdb at server: '" + opt.couchserveruri + "' and database: '" + opt.databasename + "'" 
         
     # Cleanup
+    mozrunner.kill_process_by_name("crashreporter")
     mozrunner.kill_process_by_name("firefox-bin")
     cleanup()
     return 0
