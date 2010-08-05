@@ -152,7 +152,7 @@ def main(argv):
         ret = run_builds(argv, opt, basedir)
         if ret != 0:
             print ret
-        if i % 6 == 0:
+        if i % 12 == 0:
             clean_temp_folder(basedir)
         i += 1
         print "[Info] Sleeping for 4 hour"

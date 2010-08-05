@@ -86,6 +86,9 @@ def main(argv):
     testheaderdoc = {"type" : "header"}
     testresultdoc = None
     testprogressinfo = ""
+    
+    resultCount = 0
+    lastResultDoc == None
 
     logfilehandle = open(options.logfilename, 'r')
     for logline in logfilehandle:
@@ -125,10 +128,17 @@ def main(argv):
                     if testprogressinfo != "":
                         testresultdoc["progress"] = testprogressinfo
                         testprogressinfo = ""
+                    resultCount += 1
+                    lastResultDoc = dict(testresultdoc)
                     couchdb.create(testresultdoc)
                     if "progress" in testresultdoc:
                         del(testresultdoc["progress"])
 
+    if resultCount < lastResultDoc["Total Tests"]:
+        lastResultDoc["type"] = "crash"
+        lastResultDoc["tests run"] = resultCount
+        couchdb.create(lastResultDoc)
+        
     logfilehandle.close()
     return 0
 
