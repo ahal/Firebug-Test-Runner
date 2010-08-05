@@ -134,9 +134,10 @@ def main(argv):
                     if "progress" in testresultdoc:
                         del(testresultdoc["progress"])
 
-    if resultCount < lastResultDoc["Total Tests"]:
+    if resultCount < int(lastResultDoc["Total Tests"]):
+        print "[Info] Possible crash detected"
         lastResultDoc["type"] = "crash"
-        lastResultDoc["tests run"] = resultCount
+        lastResultDoc["tests run"] = str(resultCount)
         couchdb.create(lastResultDoc)
         
     logfilehandle.close()
