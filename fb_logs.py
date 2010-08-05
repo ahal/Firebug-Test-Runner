@@ -88,7 +88,7 @@ def main(argv):
     testprogressinfo = ""
     
     resultCount = 0
-    lastResultDoc == None
+    lastResultDoc = None
 
     logfilehandle = open(options.logfilename, 'r')
     for logline in logfilehandle:
