@@ -70,9 +70,11 @@ def update(opt):
         # Create custom testlist
         if opt.testlistname != None:            
             create_custom_testlist(opt.testlistname, opt.exceptlist.split(","), section[-3:])
+        os.system("wget --output-document=" + os.path.join(section.lower(), "testlist.html") + " " + test_bot.get(section, "TEST_LIST"))
         os.system("wget --output-document=" + os.path.join(section.lower(), "firebug.xpi") + " " + test_bot.get(section, "FIREBUG_XPI"))
         os.system("wget --output-document=" + os.path.join(section.lower(), "fbtest.xpi") + " " + test_bot.get(section, "FBTEST_XPI"))
         os.system("cp -r " + section.lower() + " " + opt.serverpath)
+        os.system("cp -u test-bot.config " + opt.serverpath)
 
 
 def main(argv):

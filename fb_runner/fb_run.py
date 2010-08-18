@@ -117,7 +117,7 @@ def create_log(profile, opt):
     except:
         return -1
     
-def run_test(opt): 
+def run_test(opt):
     if opt.profile != None:
         # Ensure the profile actually exists
         if not os.path.exists(os.path.join(opt.profile, "prefs.js")):
@@ -131,6 +131,10 @@ def run_test(opt):
     # Concatenate serverpath based on Firebug version
     opt.serverpath = ("" if opt.serverpath[0:7] == "http://" else "http://") + opt.serverpath
     opt.serverpath += ("" if opt.serverpath[-1] == "/" else "/" + "firebug") + opt.version
+    
+    # Ensure we have a testlist set
+    if opt.testlist == None:
+        opt.testlist = opt.serverpath + "/tests/content/testlists/firebug" + opt.version + ".html"
 
     # If extensions were left over from last time, delete them
     cleanup()
@@ -152,7 +156,7 @@ def run_test(opt):
         profile = mozrunner.FirefoxProfile(profile=opt.profile, create_new=True if opt.profile == None else False,
                                            addons=["firebug.xpi", "fbtest.xpi"])
         runner = mozrunner.FirefoxRunner(binary=opt.binary, profile=profile, 
-                                         cmdargs=["-runFBTests", opt.serverpath + "/tests/content/testlists/" + opt.testlist], env=dict)
+                                         cmdargs=["-runFBTests", opt.testlist], env=dict)
         runner.start()
     except Exception as e:
         cleanup()
@@ -233,7 +237,6 @@ def main(argv):
                       help="Database name to keep log information")
                         
     parser.add_option("-t", "--testlist", dest="testlist",
-                      default="firebug" + opt.version + ".html",
                       help="Specify the name of the testlist to use, should usually use the default")
                         
     (opt, remainder) = parser.parse_args(argv)
