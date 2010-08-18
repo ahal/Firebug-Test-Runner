@@ -41,10 +41,11 @@ import sys
 desc = """Scripts for running the Firebug Unit Tests against several Mozilla builds"""
 summ = """Scripts for running the Firebug Unit Tests against several Mozilla builds"""
 
-PACKAGE_NAME = "fb-runner"
+PACKAGE_NAME = "fb_runner"
 PACKAGE_VERSION = "1.0"
 
-deps = ["mozrunner >= 2.4.4b4"]
+deps = ["mozrunner >= 2.4.4b4",
+        "couchquery >= 0.9"]
 
 setup(name=PACKAGE_NAME,
       version=PACKAGE_VERSION,
