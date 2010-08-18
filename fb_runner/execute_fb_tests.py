@@ -122,7 +122,7 @@ def run_builds(argv, opt, basedir):
         if build_needed(build, os.path.join(saveLocation, "firefox/")):
             # Run fb_run.py with argv
             global changeset
-            argv[-1] = os.path.join(saveLocation, "firefox/firefox")
+            argv[-1] = os.path.join(saveLocation, "firefox", "firefox" + (".exe" if platform.system().lower()=="windows" else ""))
             ret = fb_run.main(argv)
             if ret != 0:
                 print ret

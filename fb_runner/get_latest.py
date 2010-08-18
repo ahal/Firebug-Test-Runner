@@ -43,7 +43,7 @@ import sys
 import platform
 
 if platform.system().lower() == "windows":
-    REGEX = re.compile(r'firefox-.*\.en-US\.linux-(i686|x86_64)\.tar\.bz2')
+    REGEX = re.compile(r'firefox-.*\.en-US\.win(32|64)\.zip')
 elif platform.system().lower() == "linux":
     REGEX = re.compile(r'firefox-.*\.en-US\.linux-(i686|x86_64)\.tar\.bz2')
 else:
@@ -76,18 +76,18 @@ def latest_build_url(url):
     if REGEX.match(href):
       return '%s/%s' % (build_info.rstrip('/'), href)
 
-def platform():
+def find_platform():
   """returns string of platform, as displayed for buildbot builds"""
   # XXX this should use the same code as buildbot
   bits, linkage = platform.architecture()
-  os = platform.system.lower()
-  print os + " " + bits
+  bits = bits[0:2]
+  os = platform.system().lower()
   if os == 'linux' or os == 'linux2':
     return 'linux' + (bits if bits=='64' else '')
   elif os == 'windows' or os == 'win32':
-    return 'win' + bits
+    return 'win32'
   elif os == 'darwin' or os == 'macosx':
-    return 'macosx' + (bits if bits=='64' else '')
+    raise NotImplementedError
   else:
     raise NotImplementedError
 
@@ -100,7 +100,7 @@ def main(args=sys.argv[1:]):
                     action='store_true', default=False,
                     help="get a debug build")
   try:
-    client_platform = platform()
+    client_platform = find_platform()
   except NotImplementedError:
     client_platform = None
   platform_help = 'platform (linux, linux64, win32, macosx, macosx64, etc)'
