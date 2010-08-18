@@ -152,7 +152,6 @@ def run_test(opt):
     # Create profile for mozrunner and start the Firebug tests
     print "[Info] Starting FBTests"
     try:
-        print opt.profile == None
         profile = mozrunner.FirefoxProfile(profile=opt.profile, create_new=True if opt.profile == None else False,
                                            addons=["firebug.xpi", "fbtest.xpi"])
         runner = mozrunner.FirefoxRunner(binary=opt.binary, profile=profile, 
@@ -192,7 +191,6 @@ def run_test(opt):
         filename = file.name
         file.close()
         print "[Info] Sending log file to couchdb at '" + opt.couchserveruri + "'"
-        print opt.binary[0:opt.binary.rfind("/")]
         if fb_logs.main(["--log", filename, "--database", opt.databasename, "--couch", opt.couchserveruri,
                          "--changeset", get_changeset(opt.binary[0:opt.binary.rfind("/")])]) != 0:
             return "[Error] Log file not sent to couchdb at server: '" + opt.couchserveruri + "' and database: '" + opt.databasename + "'" 
