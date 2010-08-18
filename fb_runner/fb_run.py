@@ -117,10 +117,7 @@ def create_log(profile, opt):
     except:
         return -1
     
-def run_test(opt):
-    if opt.testlist == None:
-        opt.testlist = "firebug" + opt.version + ".html"
-
+def run_test(opt): 
     if opt.profile != None:
         # Ensure the profile actually exists
         if not os.path.exists(os.path.join(opt.profile, "prefs.js")):
@@ -192,7 +189,7 @@ def run_test(opt):
         file.close()
         print "[Info] Sending log file to couchdb at '" + opt.couchserveruri + "'"
         if fb_logs.main(["--log", filename, "--database", opt.databasename, "--couch", opt.couchserveruri,
-                         "--changeset", get_changeset(opt.binary[0:opt.binary.rfind("/")])]) != 0:
+                         "--changeset", get_changeset(opt.binary[0:opt.binary.rfind("\\" if platform.system().lower()=="windows" else "/")])]) != 0:
             return "[Error] Log file not sent to couchdb at server: '" + opt.couchserveruri + "' and database: '" + opt.databasename + "'" 
         
     # Cleanup
@@ -236,6 +233,7 @@ def main(argv):
                       help="Database name to keep log information")
                         
     parser.add_option("-t", "--testlist", dest="testlist",
+                      default="firebug" + opt.version + ".html",
                       help="Specify the name of the testlist to use, should usually use the default")
                         
     (opt, remainder) = parser.parse_args(argv)

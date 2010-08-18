@@ -97,6 +97,7 @@ def run_builds(argv, opt, basedir):
     config.read("test-bot.config")
     
     builds = config.get("Firebug" + opt.version, "FIREFOX_VERSION").split(",")
+    testlist = config.get("Firebug" + opt.version, "TEST_LIST");
     os.remove("test-bot.config")
     ret = 0
     # For each version of Firefox, see if it needs to be rebuilt and call fb_run to run the tests
@@ -122,7 +123,8 @@ def run_builds(argv, opt, basedir):
         if build_needed(build, os.path.join(saveLocation, "firefox/")):
             # Run fb_run.py with argv
             global changeset
-            argv[-1] = os.path.join(saveLocation, "firefox", "firefox" + (".exe" if platform.system().lower()=="windows" else ""))
+            argv[-3] = os.path.join(saveLocation, "firefox", "firefox" + (".exe" if platform.system().lower()=="windows" else ""))
+            argv[-1] = testlist
             ret = fb_run.main(argv)
             if ret != 0:
                 print ret
@@ -156,6 +158,8 @@ def main(argv):
     # Synthesize arguments to be passed to fb_run
     argv.append("-b")
     argv.append("buildpath")        # Placeholder
+    argv.append("-t")
+    argv.append("testlist")         # Placeholder
     
     # Temporary directory to store tinderbox builds and temporary profiles
     tempdir = tempfile.gettempdir();
