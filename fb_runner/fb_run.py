@@ -186,7 +186,7 @@ def run_test(opt):
                 mozrunner.sleep(1)
                 timeout += 1;
                 
-    # Give last two lines of file a chance to write and send log file to fb_logs.py  
+    # Give last two lines of file a chance to write and send log file to fb_logs  
     if file != -1:
         mozrunner.sleep(2)
         filename = file.name

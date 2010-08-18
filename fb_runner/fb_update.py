@@ -81,7 +81,7 @@ def main(argv):
     # Initialization
     config = ConfigParser()
     try:
-        config.read("fb-test-runner.config")
+        config.read(os.path.join("config","fb-test-runner.config"))
     except ConfigParser.NoSectionError:
         print "[Warn] Could not find 'fb-test-runner.config' in local directory"
         file = open("fb-test-runner.config", "w")
