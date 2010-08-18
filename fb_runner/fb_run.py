@@ -37,8 +37,8 @@
 #
 # ***** END LICENSE BLOCK *****
 
-from ConfigParser import ConfigParser
 from optparse import OptionParser
+import ConfigParser
 import os, sys
 import mozrunner
 import urllib2
@@ -151,11 +151,13 @@ def run_test(opt):
     # Create profile for mozrunner and start the Firebug tests
     print "[Info] Starting FBTests"
     try:
-        profile = mozrunner.FirefoxProfile(profile=opt.profile, create_new=(True if opt.profile==None else False),
-                                           addons=["firebug.xpi", "fbtest.xpi"])
+        print opt.profile == None
+        profile = mozrunner.FirefoxProfile(addons=["firebug.xpi", "fbtest.xpi"])
+        print 1
                                         
         runner = mozrunner.FirefoxRunner(binary=opt.binary, profile=profile, 
                                          cmdargs=["-runFBTests", opt.serverpath + "/tests/content/testlists/" + opt.testlist], env=dict)
+        print 2
         runner.start()
     except Exception as e:
         cleanup()
@@ -202,11 +204,12 @@ def run_test(opt):
 
 def main(argv): 
     # Initialization
-    config = ConfigParser()
+    config = ConfigParser.ConfigParser()
     try:
-        config.read("fb-test-runner.config")
+        print os.path.dirname(__file__)
+        config.read(os.path.join(os.path.dirname(__file__), "config/fb-test-runner.config"))
     except ConfigParser.NoSectionError:
-        print "[Warn] Could not find 'fb-test-runner.config' in local directory"
+        print "[Warn] Could not find 'fb-test-runner.config'"
         file = open("fb-test-runner.config", "w")
         file.close()
         config.read("fb-test-runner.config")

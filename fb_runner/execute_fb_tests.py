@@ -36,9 +36,9 @@
 # ***** END LICENSE BLOCK *****
 
 from time import sleep
+from ConfigParser import ConfigParser
 import fb_run
 import get_latest
-import ConfigParser
 import os, sys
 import optparse
 import shutil
@@ -88,13 +88,16 @@ def run_builds(argv, opt, basedir):
     # Lookup table mapping Firefox versions to Gecko versions
     lookup = { '3.5' : '1.9.1', '3.6' : '1.9.2', '3.7' : 'central', '4.0' : 'central' }
     # Download test-bot.config to see which versions of Firefox to run the FBTests against
-    if fb_run.retrieve_url(opt.serverpath + ("" if opt.serverpath[-1] == "/" else "/") + "test-bot.config", "test-bot.config") != 0:
+    opt.serverpath = ("" if opt.serverpath[0:7] == "http://" else "http://") + opt.serverpath
+    opt.serverpath += ("" if opt.serverpath[-1] == "/" else "/")
+    if fb_run.retrieve_url(opt.serverpath + "test-bot.config", "test-bot.config") != 0:
         return "[Error] Could not download 'test-bot.config' from '" + opt.serverpath + "'"
     
-    config = ConfigParser.ConfigParser()
+    config = ConfigParser()
     config.read("test-bot.config")
     
     builds = config.get("Firebug" + opt.version, "FIREFOX_VERSION").split(",")
+    os.remove("test-bot.config")
     ret = 0
     # For each version of Firefox, see if it needs to be rebuilt and call fb_run to run the tests
     for build in builds:
@@ -164,11 +167,7 @@ def main(argv):
         print "[Info] Starting builds and FBTests for Firebug" + opt.version
         
         # Run the builds and catch any exceptions that may have been missed
-        try:
-            ret = run_builds(argv, opt, tempdir)
-        except Exception as e:
-            print "[Error] Exception: " + str(e)
-        
+        ret = run_builds(argv, opt, tempdir)
         if ret != 0:
             print ret
         

@@ -111,7 +111,7 @@ def main(args=sys.argv[1:]):
     BASE_URL += '-debug'
   BASE_URL += '/'
 
-  print latest_build_url(BASE_URL)
+  return latest_build_url(BASE_URL)
 
 if __name__ == '__main__':
   main()
