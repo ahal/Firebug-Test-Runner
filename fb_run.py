@@ -39,9 +39,17 @@
 
 from ConfigParser import ConfigParser
 from optparse import OptionParser
-import os, sys, mozrunner, urllib2, fb_logs, datetime
+import os, sys
+import mozrunner
+import urllib2
+import fb_logs
+import datetime
+import platform
 
 def cleanup():
+    """
+    Remove temporarily downloaded files
+    """
     "Perform cleanup and exit"
     if os.path.exists("firebug.xpi"):
         os.remove("firebug.xpi")
@@ -51,7 +59,10 @@ def cleanup():
         os.remove("test-bot.config")
         
 def retrieve_url(url, filename):
-    try:    
+    """
+    Save the file located at 'url' into 'filename'
+    """
+    try:
         ret = urllib2.urlopen(url)
     except:
         return -1
@@ -61,12 +72,28 @@ def retrieve_url(url, filename):
     return 0
 
 def parse_rdf(lines, tagname):
+    """
+    Parse a list of rdf formated text
+    and return the value of 'tagname'
+    """
     for line in lines:
         if line.find("<em:" + tagname + ">") != -1:
             return line[line.find(">") + 1:line.rfind("<")]
     return -1
 
+def get_changeset(buildpath):
+    """
+    Return the changeset of the build located at 'buildpath'
+    """
+    app_ini = ConfigParser.ConfigParser()
+    app_ini.read(os.path.join(buildpath, "application.ini"))
+    return app_ini.get("App", "SourceStamp")
+
 def create_log(profile, opt):
+    """
+    In the event that the FBTests fail to run and no log file is created,
+    create our own to send to the database.
+    """
     try:
         content = []
         file = open(os.path.join(profile, "extensions/firebug@software.joehewitt.com/install.rdf"))
@@ -89,20 +116,6 @@ def create_log(profile, opt):
     except:
         return -1
     
-def disable_crashreporter(binary_path):
-    try:
-        parser = ConfigParser()
-        parser.read(os.path.join(binary_path, "application.ini"))
-        if parser.has_option("Crash Reporter", "Enabled"):
-            parser.set("Crash Reporter", "Enabled", 0)
-            file = open(os.path.join(binary_path, "application.ini"), "w")
-            parser.write(file)
-            file.close()
-            return 0
-    except:
-        pass
-    return -1
-    
 def run_test(opt):
     if opt.testlist == None:
         opt.testlist = "firebug" + opt.version + ".html"
@@ -118,25 +131,22 @@ def run_test(opt):
                 os.rename(os.path.join(opt.profile, "firebug/fbtest/logs", name), os.path.join(opt.profile, "firebug/fbtest/logs_old", name))
 
     # Concatenate serverpath based on Firebug version
-    opt.serverpath = opt.serverpath + ("" if opt.serverpath[-1] == "/" else "/") + "firebug" + opt.version
+    opt.serverpath = ("" if opt.serverpath[0:7] == "http://" else "http://") + opt.serverpath
+    opt.serverpath += ("" if opt.serverpath[-1] == "/" else "/" + "firebug") + opt.version
 
-    # If the extensions were somehow left over from last time, delete them to ensure we don't accidentally run the wrong version
+    # If extensions were left over from last time, delete them
     cleanup()
 
-    # Grab the extensions from the server   
+    # Grab the extensions from server   
     if retrieve_url(opt.serverpath + "/firebug.xpi", "firebug.xpi") != 0 or retrieve_url(opt.serverpath + "/fbtest.xpi", "fbtest.xpi") != 0:
-        return "[Error] Extensions could not be downloaded. Check that '" + opt.serverpath + "' exists and run 'fb-update.py' on the host machine"
-
-    # If firefox is running, kill it (needed for mozrunner)
-    mozrunner.kill_process_by_name("firefox-bin")
+        return "[Error] Extensions could not be downloaded. Check that '" + opt.serverpath + "' exists and run 'fb_update.py' on the server"
 
     # Create environment variables
     dict = os.environ
     dict["XPC_DEBUG_WARN"] = "warn"
 
-    # Disable crash reporter
-    if disable_crashreporter(opt.binary[0:opt.binary.rfind("/") if opt.binary.rfind("/") != -1 else opt.binary.rfind("\\")]) != 0:
-        print "[Warn] Could not disable crash reporter"
+    # If firefox is running, kill it (needed for mozrunner)
+    mozrunner.kill_process_by_name("firefox" + (".exe" if platform.system().lower() == "windows" else "-bin"))
 
     # Create profile for mozrunner and start the Firebug tests
     print "[Info] Starting FBTests"
@@ -147,9 +157,9 @@ def run_test(opt):
         runner = mozrunner.FirefoxRunner(binary=opt.binary, profile=profile, 
                                          cmdargs=["-runFBTests", opt.serverpath + "/tests/content/testlists/" + opt.testlist], env=dict)
         runner.start()
-    except IOError:
+    except Exception as e:
         cleanup()
-        return "[Error] Could not download the firebug extensions"
+        return "[Error] Could not start Firefox: " + str(e)
 
     # Find the log file
     timeout, file = 0, 0
@@ -185,8 +195,8 @@ def run_test(opt):
             return "[Error] Log file not sent to couchdb at server: '" + opt.couchserveruri + "' and database: '" + opt.databasename + "'" 
         
     # Cleanup
-    mozrunner.kill_process_by_name("crashreporter")
-    mozrunner.kill_process_by_name("firefox-bin")
+    mozrunner.kill_process_by_name("crashreporter" + (".exe" if platform.system().lower() == "windows" else ""))
+    mozrunner.kill_process_by_name("firefox" + (".exe" if platform.system().lower() == "windows" else "-bin"))
     cleanup()
     return 0
 
@@ -227,7 +237,6 @@ def main(argv):
     parser.add_option("-t", "--testlist", dest="testlist",
                       help="Specify the name of the testlist to use, should usually use the default")
                         
-    parser.add_option("--changeset", dest="changeset")
     (opt, remainder) = parser.parse_args(argv)
     
     return run_test(opt)

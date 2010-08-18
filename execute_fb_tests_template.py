@@ -36,42 +36,43 @@
 # ***** END LICENSE BLOCK *****
 
 from time import sleep
-import fb_run, ConfigParser, os, sys, optparse, urllib2, get_latest, tarfile, shutil
+import fb_run
+import get_latest
+import ConfigParser
+import os, sys
+import optparse
+import shutil
+import tempfile
+import platform
+
+if platform.system().lower() == "windows":
+    import zipfile
+else:
+    import tarfile
 
 # Global changeset variable
 changeset = {}
 
-# Clean the temporary folder
-def clean_temp_folder(basedir):
+def clean_temp_folder(tempdir):
+    """
+    Clean the temporary directory
+    """
     try:
-        for filename in os.listdir(basedir):
-            if os.isdir(os.path.join(basedir, filename)) and filename[0:3] == "tmp":
-                shutil(os.path.join(basedir,filename))
+        os.remove(os.path.join(tempdir, "mozilla-" + build + (".zip" if platform.system.lower()=="windows" else ".tar.bz2")))
+        shutil.rmtree(os.path.join(tempdir, "mozilla-" + build))
+        for filename in os.listdir(tempdir):
+            if os.isdir(os.path.join(tempdir, filename)) and filename[0:3] == "tmp":
+                shutil(os.path.join(tempdir,filename))
     except:
         return -1
 
-# Save the file located at 'url' into 'filename'
-def retrieve_url(url, filename):
-    try:
-        ret = urllib2.urlopen(url)
-    except:
-        return -1
-    output = open(filename, 'wb')
-    output.write(ret.read())
-    output.close()
-    return 0
-
-# Return the changeset of the build located at 'buildpath'
-def get_changeset(buildpath):
-    app_ini = ConfigParser.ConfigParser()
-    app_ini.read(os.path.join(buildpath, "application.ini"))
-    return app_ini.get("App", "SourceStamp")
-
-# Return False if the tests have never been run against the current changeset of 'build'
-# True otherwise
 def build_needed(build, buildpath):
+    """
+    Return True if the tests have never been run against the current changeset of 'build'
+    Return False otherwise
+    """
     # Find new changeset
-    new_changeset = get_changeset(buildpath)
+    new_changeset = fb_run.get_changeset(buildpath)
     global changeset
     if not build in changeset:
         changeset[build] = -1
@@ -81,8 +82,11 @@ def build_needed(build, buildpath):
     return False
 
 def run_builds(argv, opt, basedir):
-    # Lookup table mapping firefox versions to builds
-    lookup = { '3.5' : '1.9.1', '3.6' : '1.9.2', '3.7' : '1.9.3', '4.0' : '2.0.0' }
+    """
+    Runs the firefox tests
+    """
+    # Lookup table mapping Firefox versions to Gecko versions
+    lookup = { '3.5' : '1.9.1', '3.6' : '1.9.2', '3.7' : 'central', '4.0' : 'central' }
     # Download test-bot.config to see which versions of Firefox to run the FBTests against
     if retrieve_url(opt.serverpath + ("" if opt.serverpath[-1] == "/" else "/") + "test-bot.config", "test-bot.config") != 0:
         return "[Error] Could not download 'test-bot.config' from '" + opt.serverpath + "'"
@@ -91,6 +95,7 @@ def run_builds(argv, opt, basedir):
     config.read("test-bot.config")
     
     builds = config.get("Firebug" + opt.version, "FIREFOX_VERSION").split(",")
+    ret = 0
     # For each version of Firefox, see if it needs to be rebuilt and call fb_run to run the tests
     for build in builds:
         build = lookup[build]
@@ -98,24 +103,31 @@ def run_builds(argv, opt, basedir):
 
         try:
             # Scrape for the latest tinderbox build and extract it to the tmp directory
-            retrieve_url(get_latest.main(["--product=mozilla-" + (build if build != "1.9.3" else "central")]), os.path.join(basedir, "mozilla-" + build + ".tar.bz2"))
-            tar = tarfile.open(os.path.join(basedir, "mozilla-" + build + ".tar.bz2"))
-            tar.extractall(os.path.join(basedir, "mozilla-" + build))
-            tar.close()
-        except IOError:
-            return "[Error] Could not grab the latest tinderbox build"
-        if build_needed(build, os.path.join(basedir, "mozilla-" + build + "/firefox/")):
+            saveLocation = os.path.join(basedir, "mozilla-" + build);
+            if platform.system().lower() == "windows":
+                fb_run.retrieve_url(get_latest.main(["--product=mozilla-" + build]), saveLocation + ".zip")
+                bundle = zipfile.ZipFile(saveLocation + ".zip")
+            else:
+                fb_run.retrieve_url(get_latest.main(["--product=mozilla-" + build]), saveLocation + ".tar.bz2")
+                bundle = tarfile.open(saveLocation + ".tar.bz2")
+            bundle.extractall(saveLocation)
+            bundle.close()
+        except IOError as e:
+            print "[Error] Could not grab the latest tinderbox build: " + str(e)
+            continue
+        
+        if build_needed(build, os.path.join(saveLocation, "firefox/")):
             # Run fb_run.py with argv
             global changeset
-            argv[-3] = os.path.join(basedir, "mozilla-" + build + "/firefox/firefox")
-            argv[-1] = changeset[build]
+            argv[-1] = os.path.join(saveLocation, "firefox/firefox")
             ret = fb_run.main(argv)
             if ret != 0:
                 print ret
-        # Remove build directories
-        os.remove(os.path.join(basedir, "mozilla-" + build + ".tar.bz2"))
-        shutil.rmtree(os.path.join(basedir, "mozilla-" + build))
-    return 0
+                
+        # Remove build directories and temp files
+        clean_temp_folder(basedir)
+        
+    return ret
 
 def main(argv):
     usage = "%prog [options]"
@@ -136,27 +148,33 @@ def main(argv):
                       help="Database name to keep log information")
                         
     parser.add_option("-t", "--testlist", dest="testlist",
-                      help="Testlist to use. Should use default")
+                      help="Url to the testlist to use")
     (opt, remainder) = parser.parse_args(argv)
     # Synthesize arguments to be passed to fb_run
     argv.append("-b")
     argv.append("buildpath")        # Placeholder
-    argv.append("--changeset")
-    argv.append("changeset")        # Placeholder
     
-    basedir = "/tmp"
-    
-    i = 0
-    while True:
+    # Temporary directory to store tinderbox builds and temporary profiles
+    tempdir = tempfile.gettempdir();
+    # The number of hours to wait between running firebug tests
+    waitTime = 6
+
+    ret = True
+    while ret != "quit":
         print "[Info] Starting builds and FBTests for Firebug" + opt.version
-        ret = run_builds(argv, opt, basedir)
+        
+        # Run the builds and catch any exceptions that may have been missed
+        try:
+            ret = run_builds(argv, opt, tempdir)
+        except Exception as e:
+            print "[Error] Exception: " + str(e)
+        
         if ret != 0:
             print ret
-        if i % 12 == 0:
-            clean_temp_folder(basedir)
-        i += 1
-        print "[Info] Sleeping for 4 hour"
-        sleep(14400)
+        
+        # Wait for 
+        print "[Info] Sleeping for " + str(waitTime) + "hour" + ("s" if waitTime > 1 else "")
+        sleep(waitTime * 3600)
         
     
 if __name__ == '__main__':
