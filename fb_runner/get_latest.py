@@ -40,8 +40,14 @@
 import lxml.html
 import re
 import sys
+import platform
 
-REGEX = re.compile(r'firefox-.*\.en-US\.linux-(i686|x86_64)\.tar\.bz2')
+if platform.system().lower() == "windows":
+    REGEX = re.compile(r'firefox-.*\.en-US\.linux-(i686|x86_64)\.tar\.bz2')
+elif platform.system().lower() == "linux":
+    REGEX = re.compile(r'firefox-.*\.en-US\.linux-(i686|x86_64)\.tar\.bz2')
+else:
+    REGEX = re.compile(r'firefox-.*\.en-US\.linux-(i686|x86_64)\.tar\.bz2')
 
 def builds(url):
   element = lxml.html.parse(url)
@@ -73,10 +79,17 @@ def latest_build_url(url):
 def platform():
   """returns string of platform, as displayed for buildbot builds"""
   # XXX this should use the same code as buildbot
-
-  if sys.platform == 'linux2':
-    return 'linux'
-  raise NotImplementedError
+  bits, linkage = platform.architecture()
+  os = platform.system.lower()
+  print os + " " + bits
+  if os == 'linux' or os == 'linux2':
+    return 'linux' + (bits if bits=='64' else '')
+  elif os == 'windows' or os == 'win32':
+    return 'win' + bits
+  elif os == 'darwin' or os == 'macosx':
+    return 'macosx' + (bits if bits=='64' else '')
+  else:
+    raise NotImplementedError
 
 def main(args=sys.argv[1:]):
 
@@ -88,7 +101,7 @@ def main(args=sys.argv[1:]):
                     help="get a debug build")
   try:
     client_platform = platform()
-  except NotImplementerError:
+  except NotImplementedError:
     client_platform = None
   platform_help = 'platform (linux, linux64, win32, macosx, macosx64, etc)'
   if client_platform:
