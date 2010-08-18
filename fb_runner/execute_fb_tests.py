@@ -88,7 +88,7 @@ def run_builds(argv, opt, basedir):
     # Lookup table mapping Firefox versions to Gecko versions
     lookup = { '3.5' : '1.9.1', '3.6' : '1.9.2', '3.7' : 'central', '4.0' : 'central' }
     # Download test-bot.config to see which versions of Firefox to run the FBTests against
-    if retrieve_url(opt.serverpath + ("" if opt.serverpath[-1] == "/" else "/") + "test-bot.config", "test-bot.config") != 0:
+    if fb_run.retrieve_url(opt.serverpath + ("" if opt.serverpath[-1] == "/" else "/") + "test-bot.config", "test-bot.config") != 0:
         return "[Error] Could not download 'test-bot.config' from '" + opt.serverpath + "'"
     
     config = ConfigParser.ConfigParser()
@@ -173,7 +173,7 @@ def main(argv):
             print ret
         
         # Wait for 
-        print "[Info] Sleeping for " + str(waitTime) + "hour" + ("s" if waitTime > 1 else "")
+        print "[Info] Sleeping for " + str(waitTime) + " hour" + ("s" if waitTime > 1 else "")
         sleep(waitTime * 3600)
         
     

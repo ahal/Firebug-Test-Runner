@@ -38,14 +38,17 @@
 from setuptools import setup, find_packages
 import sys
 
-desc = """Scripts for running the Firebug Unit Tests against several Mozilla builds"""
-summ = """Scripts for running the Firebug Unit Tests against several Mozilla builds"""
+desc = """Scripts for running the Firebug Unit Tests against various Mozilla builds"""
+summ = """Scripts for running the Firebug Unit Tests against various Mozilla builds"""
 
 PACKAGE_NAME = "fb_runner"
 PACKAGE_VERSION = "1.0"
 
 deps = ["mozrunner >= 2.4.4b4",
         "couchquery >= 0.9"]
+        
+if not sys.version.startswith('2.6'):
+    deps.append('simplejson')
 
 setup(name=PACKAGE_NAME,
       version=PACKAGE_VERSION,
@@ -58,12 +61,12 @@ setup(name=PACKAGE_NAME,
       packages=find_packages(exclude=['legacy']),
       entry_points="""
           [console_scripts]
-          fb-runner = execute_fb_tests:main
+          fb_runner = fb_runner:cli
         """,
       platforms =['Any'],
       install_requires = deps,
       classifiers=['Environment :: Console',
-                   'Intended Audience :: Testers',
+                   'Intended Audience :: Developers',
                    'License :: OSI Approved :: Mozilla Public License 1.1 (MPL 1.1)',
                    'Operating System :: OS Independent',
                    'Topic :: Software Development :: Libraries :: Python Modules',
