@@ -44,7 +44,7 @@ summ = """Scripts for running the Firebug Unit Tests against various Mozilla bui
 PACKAGE_NAME = "fb_runner"
 PACKAGE_VERSION = "1.0"
 
-deps = ["mozrunner >= 2.4.4b4",
+deps = ["mozrunner == 2.4.3",
         "couchquery >= 0.9"]
         
 if not sys.version.startswith('2.6'):
@@ -59,6 +59,7 @@ setup(name=PACKAGE_NAME,
       url='http://github.com/ahal/Firebug-Test-Runner',
       license='MPL 1.1/GPL 2.0/LGPL 2.1',
       packages=find_packages(exclude=['legacy']),
+      include_package_data=True,
       entry_points="""
           [console_scripts]
           fb_runner = fb_runner:cli

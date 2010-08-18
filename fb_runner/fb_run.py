@@ -45,6 +45,7 @@ import urllib2
 import fb_logs
 import datetime
 import platform
+import pdb
 
 def cleanup():
     """
@@ -152,12 +153,10 @@ def run_test(opt):
     print "[Info] Starting FBTests"
     try:
         print opt.profile == None
-        profile = mozrunner.FirefoxProfile(addons=["firebug.xpi", "fbtest.xpi"])
-        print 1
-                                        
+        profile = mozrunner.FirefoxProfile(profile=opt.profile, create_new=True if opt.profile == None else False,
+                                           addons=["firebug.xpi", "fbtest.xpi"])
         runner = mozrunner.FirefoxRunner(binary=opt.binary, profile=profile, 
                                          cmdargs=["-runFBTests", opt.serverpath + "/tests/content/testlists/" + opt.testlist], env=dict)
-        print 2
         runner.start()
     except Exception as e:
         cleanup()
@@ -193,7 +192,9 @@ def run_test(opt):
         filename = file.name
         file.close()
         print "[Info] Sending log file to couchdb at '" + opt.couchserveruri + "'"
-        if fb_logs.main(["--log", filename, "--database", opt.databasename, "--couch", opt.couchserveruri, "--changeset", opt.changeset]) != 0:
+        print opt.binary[0:opt.binary.rfind("/")]
+        if fb_logs.main(["--log", filename, "--database", opt.databasename, "--couch", opt.couchserveruri,
+                         "--changeset", get_changeset(opt.binary[0:opt.binary.rfind("/")])]) != 0:
             return "[Error] Log file not sent to couchdb at server: '" + opt.couchserveruri + "' and database: '" + opt.databasename + "'" 
         
     # Cleanup
@@ -206,7 +207,6 @@ def main(argv):
     # Initialization
     config = ConfigParser.ConfigParser()
     try:
-        print os.path.dirname(__file__)
         config.read(os.path.join(os.path.dirname(__file__), "config/fb-test-runner.config"))
     except ConfigParser.NoSectionError:
         print "[Warn] Could not find 'fb-test-runner.config'"

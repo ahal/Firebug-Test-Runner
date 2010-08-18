@@ -130,7 +130,7 @@ def run_builds(argv, opt, basedir):
         # Remove build directories and temp files
         clean_temp_folder(basedir)
         
-    return ret
+    return 0
 
 def main(argv):
     usage = "%prog [options]"
