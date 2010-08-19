@@ -71,7 +71,7 @@ def update(opt):
     
     # For each section in config file, download specified files and move to webserver
     for section in test_bot.sections():
-        # Grab file locations
+        # Grab config information
         SVN_REVISION = test_bot.get(section, "SVN_REVISION")
         FIREBUG_XPI = test_bot.get(section, "FIREBUG_XPI")
         FBTEST_XPI = test_bot.get(section, "FBTEST_XPI")

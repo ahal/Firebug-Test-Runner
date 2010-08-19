@@ -59,7 +59,8 @@ setup(name=PACKAGE_NAME,
       include_package_data=False,
       entry_points="""
           [console_scripts]
-          runFBTests = runFBTests:cli
+          runFBTests = runFBTests:cli_run
+          updateFBTests = runFBTests:cli_update
         """,
       platforms =['Any'],
       install_requires = deps,

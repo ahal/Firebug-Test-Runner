@@ -66,6 +66,8 @@ def retrieve_url(url, filename):
         ret = urllib2.urlopen(url)
     except:
         return -1
+    if not os.path.exists(filename):
+        os.makedirs(os.path.dirname(filename))
     output = open(filename, 'wb')
     output.write(ret.read())
     output.close()
@@ -107,7 +109,7 @@ def create_log(profile, opt):
         content.append("FIREBUG INFO | App Platform: " + parser.get("Gecko", "MaxVersion") + "\n")
         content.append("FIREBUG INFO | App BuildID: " + parser.get("App", "BuildID") + "\n")
         content.append("FIREBUG INFO | Export Date: " + datetime.datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S GMT") + "\n")
-        content.append("FIREBUG INFO | Test Suite: " + opt.serverpath + "/tests/content/testlists/" + opt.testlist + "\n")
+        content.append("FIREBUG INFO | Test Suite: " + opt.testlist + "\n")
         content.append("FIREBUG INFO | Total Tests: 0\n")
         content.append("FIREBUG INFO | Fail | [START] Could not start FBTests\n")
         file = open(os.path.join(profile, "firebug/firebug-test.log"), "w")        
@@ -115,6 +117,21 @@ def create_log(profile, opt):
         return file
     except:
         return -1
+    
+def get_extensions(serverpath, version):
+    """
+    Downloads the firebug and fbtest extensions
+    for the specified Firebug version
+    """
+    config = ConfigParser()
+    config.read(serverpath + "/releases/firebug/test-bot.config")
+    FIREBUG_XPI = config.get("Firebug" + version, "FIREBUG_XPI")
+    FIREBUG_XPI.replace("http://getfirebug.com/", serverpath)
+    FBTEST_XPI = config.get("Firebug" + version, "FBTEST_XPI")
+    FBTEST_XPI.replace("http://getfirebug.com/", serverpath)
+    if retrieve_url(FIREBUG_XPI, "firebug.xpi") != 0 or retrieve_url(FBTEST_XPI, "fbtest.xpi") != 0:
+        return -1
+    return 0
     
 def run_test(opt):
     if opt.profile != None:
@@ -129,7 +146,7 @@ def run_test(opt):
 
     # Concatenate serverpath based on Firebug version
     opt.serverpath = ("" if opt.serverpath[0:7] == "http://" else "http://") + opt.serverpath
-    opt.serverpath += ("" if opt.serverpath[-1] == "/" else "/" + "firebug") + opt.version
+    opt.serverpath += ("" if opt.serverpath[-1] == "/" else "/")
     
     # Ensure we have a testlist set
     if opt.testlist == None:
@@ -139,7 +156,8 @@ def run_test(opt):
     cleanup()
 
     # Grab the extensions from server   
-    if retrieve_url(opt.serverpath + "/firebug.xpi", "firebug.xpi") != 0 or retrieve_url(opt.serverpath + "/fbtest.xpi", "fbtest.xpi") != 0:
+    if get_extensions(opt.serverpath) != 0:
+        cleanup()
         return "[Error] Extensions could not be downloaded. Check that '" + opt.serverpath + "' exists and run 'fb_update.py' on the server"
 
     # Create environment variables
@@ -176,14 +194,16 @@ def run_test(opt):
     if not file:
         print "[Error] Could not find the log file in profile '" + profile.profile + "'"
         file = create_log(profile.profile, opt)
-    # If log file was found, exit when fbtests are finished (wait up to 30 min)
+    # If log file found, exit when fbtests finished (if no activity, wait up to 10 min)
     else:
         line, timeout = "", 0
-        while line.find("Test Suite Finished") == -1 and timeout < 1800:
+        while line.find("Test Suite Finished") == -1 and timeout < 600:
             line = file.readline()
             if line == "":
                 mozrunner.sleep(1)
-                timeout += 1;
+                timeout += 1
+            else:
+                timeout = 0
                 
     # Give last two lines of file a chance to write and send log file to fb_logs  
     if file != -1:

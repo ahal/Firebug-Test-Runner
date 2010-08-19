@@ -100,7 +100,7 @@ def run_builds(argv, opt, basedir):
     # Grab the testlist specified in test-bot.config
     try:
         testlist = config.get("Firebug" + opt.version, "TEST_LIST")
-        testlist = testlist.replace("http://getfirebug.com/", opt.serverpath + "firebug" + opt.version + "/")
+        testlist = testlist.replace("http://getfirebug.com/", opt.serverpath)
     except:
         testlist = None
         pass
@@ -112,7 +112,7 @@ def run_builds(argv, opt, basedir):
         print "[Info] Running Firebug" + opt.version + " tests against Mozilla " + build
 
         try:
-            # Scrape for the latest tinderbox build and extract it to the tmp directory
+            # Scrape for the latest tinderbox build and extract it to the basedir
             saveLocation = os.path.join(basedir, "mozilla-" + build);
             if platform.system().lower() == "windows":
                 fb_run.retrieve_url(get_latest.main(["--product=mozilla-" + build]), saveLocation + ".zip")

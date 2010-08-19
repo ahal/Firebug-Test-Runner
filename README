@@ -8,9 +8,11 @@ of the Firebug tests to run against which versions of Firefox.  The module then 
 tinderbox builds of those Firefox versions, runs the tests and sends the results to the specified
 database.
 
-There is a configuration file in the %PKG_DIR%/fb_runner/config directory so you don't have to set the
-command line parameters manually each time.
+To run the tests use the 'runFBTests' command with the desired options.
 
+By default the module uses the test files hosted at http://getfirebug.com/tests, but users are able to 
+specify their own server if desired.  For this case, they should use the
+'updateFBTests -d path_to_document_root' command.
 
 Current results of three VM's running this module are posted here:
 http://getfirebug.com/testresults
