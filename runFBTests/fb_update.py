@@ -100,6 +100,9 @@ def main(argv):
                       default=12,
                       help="The number of hours to wait between checking for updates")
     (opt, remainder) = parser.parse_args(argv)
+    
+    if not os.path.exists(opt.repo):
+        os.mkdir(opt.repo)
 
     while (1):
         print "[INFO] Updating server extensions and tests"
