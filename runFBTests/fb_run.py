@@ -101,7 +101,7 @@ def create_log(profile, opt):
         file = open(os.path.join(profile, "extensions/fbtest@mozilla.com/install.rdf"))
         content.append("FIREBUG INFO | FBTest: " + parse_rdf(file.readlines(), "version") + "\n")
         parser = ConfigParser()
-        parser.read(os.path.join(opt.binary[0:opt.binary.rfind("/") if opt.binary.rfind("/") != -1 else opt.binary.rfind("\\")], "application.ini"))
+        parser.read(os.path.join(os.path.dirname(opt.binary), "application.ini"))
         content.append("FIREBUG INFO | App Name: " + parser.get("App", "Name") + "\n")
         content.append("FIREBUG INFO | App Version: " + parser.get("App", "Version") + "\n")
         content.append("FIREBUG INFO | App Platform: " + parser.get("Gecko", "MaxVersion") + "\n")
@@ -192,7 +192,7 @@ def run_test(opt):
         file.close()
         print "[Info] Sending log file to couchdb at '" + opt.couchserveruri + "'"
         if fb_logs.main(["--log", filename, "--database", opt.databasename, "--couch", opt.couchserveruri,
-                         "--changeset", get_changeset(opt.binary[0:opt.binary.rfind("\\" if platform.system().lower()=="windows" else "/")])]) != 0:
+                         "--changeset", get_changeset(os.path.dirname(opt.binary))]) != 0:
             return "[Error] Log file not sent to couchdb at server: '" + opt.couchserveruri + "' and database: '" + opt.databasename + "'" 
         
     # Cleanup

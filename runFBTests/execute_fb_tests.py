@@ -62,7 +62,7 @@ def clean_temp_folder(tempdir):
         shutil.rmtree(os.path.join(tempdir, "mozilla-" + build))
         for filename in os.listdir(tempdir):
             if os.isdir(os.path.join(tempdir, filename)) and filename[0:3] == "tmp":
-                shutil(os.path.join(tempdir,filename))
+                shutil.rmtree(os.path.join(tempdir,filename))
     except:
         return -1
 
