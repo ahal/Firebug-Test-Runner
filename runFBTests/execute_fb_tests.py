@@ -90,7 +90,7 @@ def run_builds(argv, opt, basedir):
     # Download test-bot.config to see which versions of Firefox to run the FBTests against
     opt.serverpath = ("" if opt.serverpath[0:7] == "http://" else "http://") + opt.serverpath
     opt.serverpath += ("" if opt.serverpath[-1] == "/" else "/")
-    if fb_run.retrieve_url(opt.serverpath + "test-bot.config", "test-bot.config") != 0:
+    if fb_run.retrieve_url(opt.serverpath + "releases/firebug/test-bot.config", "test-bot.config") != 0:
         return "[Error] Could not download 'test-bot.config' from '" + opt.serverpath + "'"
     
     config = ConfigParser()
