@@ -109,7 +109,7 @@ def main(argv):
     while (1):
         print "[INFO] Updating server extensions and tests"
         update(opt)
-        print "[INFO] Sleeping for " + opt.waitTime + " hour" + ("s" if opt.waitTime > 1 else "")
+        print "[INFO] Sleeping for " + str(opt.waitTime) + " hour" + ("s" if opt.waitTime > 1 else "")
         sleep(opt.waitTime * 3600)
 
 
