@@ -97,7 +97,13 @@ def run_builds(argv, opt, basedir):
     config.read("test-bot.config")
     
     builds = config.get("Firebug" + opt.version, "FIREFOX_VERSION").split(",")
-    testlist = config.get("Firebug" + opt.version, "TEST_LIST")
+    # Grab the testlist specified in test-bot.config
+    try:
+        testlist = config.get("Firebug" + opt.version, "TEST_LIST")
+        testlist = testlist.replace("http://getfirebug.com/", opt.serverpath + "firebug" + opt.version + "/")
+    except:
+        testlist = None
+        pass
     os.remove("test-bot.config")
     ret = 0
     # For each version of Firefox, see if it needs to be rebuilt and call fb_run to run the tests
@@ -122,7 +128,7 @@ def run_builds(argv, opt, basedir):
         
         if build_needed(build, os.path.join(saveLocation, "firefox/")):
             # Run fb_run with synthesized argv
-            if opt.testlist == None:
+            if opt.testlist == None and testlist != None:
                 argv[-3] = testlist
             argv[-1] = os.path.join(saveLocation, "firefox", "firefox" + (".exe" if platform.system().lower()=="windows" else ""))
             ret = fb_run.main(argv)
