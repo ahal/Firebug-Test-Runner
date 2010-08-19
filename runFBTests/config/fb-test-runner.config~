@@ -1,0 +1,21 @@
+# Configuration File for fb-runner module
+
+
+# Variables pertaining to execution of tests
+[run]
+server_path = http://getfirebug.com
+firebug_version = 1.6
+profile_path = None
+
+# Variables pertaining to logging and the database
+[log]
+couch_server = http://localhost:5984
+database_name = firebug
+
+# Variables pertaining to the server hosting the Firebug tests
+# This section can be ignored if you are using the default
+#getfirebug.com server
+[update]
+document_root = /var/www/
+testlist_name = None
+exceptions = None
