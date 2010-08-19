@@ -54,7 +54,7 @@ def retrieve_url(url, filename):
     except:
         return -1
     if not os.path.exists(filename):
-        os.mkdir(os.path.dirname(filename))
+        os.makedirs(os.path.dirname(filename))
     output = open(filename, 'wb')
     output.write(ret.read())
     output.close()
