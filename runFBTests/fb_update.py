@@ -53,7 +53,7 @@ def retrieve_url(url, filename):
         ret = urllib2.urlopen(url)
     except:
         return -1
-    if not os.path.exists(filename):
+    if not os.path.exists(os.path.dirname(filename)):
         os.makedirs(os.path.dirname(filename))
     output = open(filename, 'wb')
     output.write(ret.read())
