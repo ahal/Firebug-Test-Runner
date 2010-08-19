@@ -61,7 +61,7 @@ def retrieve_url(url, filename):
 def update(opt):
     # Grab the test_bot.config file
     configDir = "releases/firebug/test-bot.config"
-    retrieve_url("http://getfirebug.com/" + configDir, "files/" + configDir)
+    retrieve_url("http://getfirebug.com/" + configDir, os.path.join(opt.repo, configDir))
     
     # Parse the config file
     test_bot = ConfigParser()
@@ -76,16 +76,16 @@ def update(opt):
         
         # Update or create the svn test repository
         if not os.path.isdir(os.path.join("files", ".svn")):
-            os.system("svn co http://fbug.googlecode.com/svn/tests/ files/tests -r " + SVN_REVISION)
+            os.system("svn co http://fbug.googlecode.com/svn/tests/ " + os.path.join(opt.repo, "tests") + " -r " + SVN_REVISION)
         else:
-            os.system("files/svn update -r " + SVN_REVISION)
+            os.system(os.path.join(opt.repo, "svn") + " update -r " + SVN_REVISION)
         
         # Download the extensions
-        retrieve_url(FIREBUG_XPI, os.path.join("files", FIREBUG_XPI[FIREBUG_XPI.find("getfirebug.com/")+15:]))
-        retrieve_url(FBTEST_XPI, os.path.join("files", FBTEST_XPI[FBTEST_XPI.find("getfirebug.com/")+15:]))
+        retrieve_url(FIREBUG_XPI, os.path.join(opt.repo, FIREBUG_XPI[FIREBUG_XPI.find("getfirebug.com/")+15:]))
+        retrieve_url(FBTEST_XPI, os.path.join(opt.repo, FBTEST_XPI[FBTEST_XPI.find("getfirebug.com/")+15:]))
         
         # Copy the files to the webserver
-        os.system("cp -r files/* " + opt.serverpath)
+        os.system("cp -r " + os.path.join(opt.repo, "*") + " " + opt.serverpath)
 
 def main(argv):
     # Parse command line
@@ -93,13 +93,19 @@ def main(argv):
     parser.add_option("-d", "--document-root", dest="serverpath",
                       default="/var/www",
                       help="Path to the Apache2 document root Firebug directory")
+    parser.add_option("--repo", dest="repo",
+                      default=os.path.join(os.getcwd(), "files"),
+                      help="Location to create or update the local FBTest repository")
+    parser.add_option("-i", "--interval", dest="waitTime",
+                      default=12,
+                      help="The number of hours to wait between checking for updates")
     (opt, remainder) = parser.parse_args(argv)
 
     while (1):
         print "[INFO] Updating server extensions and tests"
         update(opt)
-        print "[INFO] Sleeping for 12 hours"
-        sleep(43200)
+        print "[INFO] Sleeping for " + opt.waitTime + " hour" + ("s" if opt.waitTime > 1 else "")
+        sleep(opt.waitTime * 3600)
 
 
 if __name__ == '__main__':
