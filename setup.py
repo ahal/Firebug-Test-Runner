@@ -41,35 +41,35 @@ import sys
 desc = """Scripts for running the Firebug Unit Tests against various Mozilla builds"""
 summ = """Scripts for running the Firebug Unit Tests against various Mozilla builds"""
 
-PACKAGE_NAME = "fb_runner"
-PACKAGE_VERSION = "1.6.1"
+PACKAGE_NAME = "runFBTests"
+PACKAGE_VERSION = "1.0.0"
 
 deps = ["mozrunner == 2.4.3",
         "couchquery >= 0.9"]
-        
-if not sys.version.startswith('2.6'):
-    deps.append('simplejson')
 
 setup(name=PACKAGE_NAME,
       version=PACKAGE_VERSION,
       description=desc,
       long_description=summ,
       author='Andrew Halberstadt, Mozilla',
-      author_email='ahalberstadt@mozilla.com',
+      author_email='halbersa@gmail.com',
       url='http://github.com/ahal/Firebug-Test-Runner',
       license='MPL 1.1/GPL 2.0/LGPL 2.1',
       packages=find_packages(exclude=['legacy']),
-      include_package_data=True,
+      include_package_data=False,
       entry_points="""
           [console_scripts]
-          fb_runner = fb_runner:cli
+          runFBTests = runFBTests:cli
         """,
       platforms =['Any'],
       install_requires = deps,
       classifiers=['Environment :: Console',
                    'Intended Audience :: Developers',
                    'License :: OSI Approved :: Mozilla Public License 1.1 (MPL 1.1)',
-                   'Operating System :: OS Independent',
+                   'Natural Language :: English',
+                   'Operating System :: Microsoft :: Windows',
+                   'Operating System :: POSIX :: Linux',
                    'Topic :: Software Development :: Libraries :: Python Modules',
+                   'Topic :: Software Development :: Testing',
                   ]
      )

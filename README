@@ -1,3 +1,16 @@
-Scripts for automating the process of running the Firebug unit tests located at http://getfirebug.com/tests/
+== Firebug Test Runner ==
 
-Results: http://getfirebug.com/tests/content/testbot/results/
+This module intends to automate the process of running the Firebug tests (https://getfirebug.com/tests/)
+which can be downloaded and installed here: http://getfirebug.com/releases/fbtest/
+
+The module examines data stored by the Firebug team in a file on their servers to determine which versions
+of the Firebug tests to run against which versions of Firefox.  The module then downloads the latest
+tinderbox builds of those Firefox versions, runs the tests and sends the results to the specified
+database.
+
+There is a configuration file in the %PKG_DIR%/fb_runner/config directory so you don't have to set the
+command line parameters manually each time.
+
+
+Current results of three VM's running this module are posted here:
+http://getfirebug.com/testresults
