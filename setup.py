@@ -42,11 +42,13 @@ desc = """Scripts for running the Firebug Unit Tests against various Mozilla bui
 summ = """Scripts for running the Firebug Unit Tests against various Mozilla builds"""
 
 PACKAGE_NAME = "runFBTests"
-PACKAGE_VERSION = "1.0.3"
+PACKAGE_VERSION = "1.0.4"
 
 deps = ["mozrunner == 2.4.3",
-        "couchquery >= 0.9",
-        "lxml >= 2.2.6",]
+        "couchquery >= 0.9"]
+        
+if sys.platform == "linux2":
+    deps.append("lxml >= 2.2.6")
 
 setup(name=PACKAGE_NAME,
       version=PACKAGE_VERSION,
