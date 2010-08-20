@@ -110,8 +110,8 @@ def main(argv):
     while (1):
         print "[INFO] Updating server extensions and tests"
         update(opt)
-        print "[INFO] Sleeping for " + str(opt.waitTime) + " hour" + ("s" if opt.waitTime > 1 else "")
-        sleep(opt.waitTime * 3600)
+        print "[INFO] Sleeping for " + str(opt.waitTime) + " hour" + ("s" if int(opt.waitTime) > 1 else "")
+        sleep(int(opt.waitTime) * 3600)
 
 
 if __name__ == '__main__':
