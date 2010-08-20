@@ -53,7 +53,7 @@ else:
 # Global changeset variable
 changeset = {}
 
-def clean_temp_folder(tempdir):
+def clean_temp_folder(tempdir, build):
     """
     Clean the temporary directory
     """
@@ -61,7 +61,7 @@ def clean_temp_folder(tempdir):
         os.remove(os.path.join(tempdir, "mozilla-" + build + (".zip" if platform.system.lower()=="windows" else ".tar.bz2")))
         shutil.rmtree(os.path.join(tempdir, "mozilla-" + build))
         for filename in os.listdir(tempdir):
-            if os.isdir(os.path.join(tempdir, filename)) and filename[0:3] == "tmp":
+            if os.path.exists(os.path.join(tempdir, filename)) and filename[0:3] == "tmp":
                 shutil.rmtree(os.path.join(tempdir,filename))
     except:
         return -1
@@ -136,7 +136,7 @@ def run_builds(argv, opt, basedir):
                 print ret
                 
         # Remove build directories and temp files
-        clean_temp_folder(basedir)
+        clean_temp_folder(basedir, build)
         
     return 0
 
