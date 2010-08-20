@@ -162,7 +162,7 @@ def main(argv):
                         
     parser.add_option("-t", "--testlist", dest="testlist",
                       help="Url to the testlist to use")
-    parser.add_option("-i", "--interval", dest="waitTime",
+    parser.add_option("--interval", dest="waitTime",
                       help="Number of hours to wait between test runs. If unspecified tests are only run once")
     (opt, remainder) = parser.parse_args(argv)
     
@@ -172,7 +172,10 @@ def main(argv):
         argv.append("testlist")     # Placeholder    
     argv.append("-b")
     argv.append("buildpath")        # Placeholder
-    
+    if opt.waitTime:
+        index = argv.index("--interval")
+        argv.pop(index + 1)
+        argv.pop(index)
     # Temporary directory to store tinderbox builds and temporary profiles
     tempdir = tempfile.gettempdir();
 

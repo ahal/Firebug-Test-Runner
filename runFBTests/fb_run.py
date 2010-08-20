@@ -272,7 +272,7 @@ def main(argv):
                         
     parser.add_option("-t", "--testlist", dest="testlist",
                       help="Specify the name of the testlist to use, should usually use the default")
-                        
+    parser.add_option("-i", dest="waitTime")
     (opt, remainder) = parser.parse_args(argv)
     
     return run_test(opt)
