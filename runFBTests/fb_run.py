@@ -136,6 +136,21 @@ def get_extensions(serverpath, version):
     if retrieve_url(FIREBUG_XPI, "firebug.xpi") != 0 or retrieve_url(FBTEST_XPI, "fbtest.xpi") != 0:
         return -1
     return 0
+
+def disable_compatibilityCheck(profile):
+    """
+    Disables compatibility check which could
+    potentially prompt the user for action
+    """
+    try:
+        prefs = open(os.path.join(profile, "prefs.js"), "wa")
+        prefs.write("user_pref(\"extensions.checkCompatibility.4.0b\", false);\n")
+        prefs.write("user_pref(\"extensions.checkCompatibility.4.0\", false);\n")
+        prefs.write("user_pref(\"extensions.checkCompatibility.3.6\", false);\n")
+        prefs.close();
+    except:
+        return -1
+    return 0
     
 def run_test(opt):
     if opt.profile != None:
@@ -176,6 +191,11 @@ def run_test(opt):
     try:
         profile = mozrunner.FirefoxProfile(profile=opt.profile, create_new=True if opt.profile == None else False,
                                            addons=["firebug.xpi", "fbtest.xpi"])
+
+        # Disable the compatibility check on startup
+        if disable_compatibilityCheck(profile.profile) != 0:
+            print "[Warn] Could not disable compatibility check"
+        
         runner = mozrunner.FirefoxRunner(binary=opt.binary, profile=profile, 
                                          cmdargs=["-runFBTests", opt.testlist], env=dict)
         runner.start()

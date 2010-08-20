@@ -57,14 +57,14 @@ def clean_temp_folder(tempdir, build):
     """
     Clean the temporary directory
     """
-    try:
-        os.remove(os.path.join(tempdir, "mozilla-" + build + (".zip" if platform.system.lower()=="windows" else ".tar.bz2")))
+    bundle = os.path.join(tempdir, "mozilla-" + build + (".zip" if platform.system().lower()=="windows" else ".tar.bz2"))
+    if os.path.isfile(bundle):
+        os.remove(bundle)
+    if os.path.isdir(os.path.join(tempdir, "mozilla-" + build)):
         shutil.rmtree(os.path.join(tempdir, "mozilla-" + build))
-        for filename in os.listdir(tempdir):
-            if os.path.exists(os.path.join(tempdir, filename)) and filename[0:3] == "tmp":
-                shutil.rmtree(os.path.join(tempdir,filename))
-    except:
-        return -1
+    for filename in os.listdir(tempdir):
+        if os.path.isdir(os.path.join(tempdir, filename)) and filename[0:3] == "tmp":            
+            shutil.rmtree(os.path.join(tempdir,filename))
 
 def build_needed(build, buildpath):
     """
