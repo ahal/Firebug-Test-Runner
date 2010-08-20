@@ -45,6 +45,7 @@ import urllib2
 import fb_logs
 import datetime
 import platform
+import pdb
 
 def cleanup():
     """
@@ -66,8 +67,9 @@ def retrieve_url(url, filename):
         ret = urllib2.urlopen(url)
     except:
         return -1
-    if not os.path.exists(os.path.dirname(filename)):
-        os.makedirs(os.path.dirname(filename))
+    dir = os.path.dirname(filename)
+    if dir and not os.path.exists(dir):
+        os.makedirs(dir)
     output = open(filename, 'wb')
     output.write(ret.read())
     output.close()
@@ -123,11 +125,13 @@ def get_extensions(serverpath, version):
     Downloads the firebug and fbtest extensions
     for the specified Firebug version
     """
+    retrieve_url(serverpath + "releases/firebug/test-bot.config", "test-bot.config")
     config = ConfigParser()
-    config.read(serverpath + "/releases/firebug/test-bot.config")
+    config.read("test-bot.config")
     FIREBUG_XPI = config.get("Firebug" + version, "FIREBUG_XPI")
-    FIREBUG_XPI.replace("http://getfirebug.com/", serverpath)
     FBTEST_XPI = config.get("Firebug" + version, "FBTEST_XPI")
+    os.remove("test-bot.config")
+    FIREBUG_XPI.replace("http://getfirebug.com/", serverpath)
     FBTEST_XPI.replace("http://getfirebug.com/", serverpath)
     if retrieve_url(FIREBUG_XPI, "firebug.xpi") != 0 or retrieve_url(FBTEST_XPI, "fbtest.xpi") != 0:
         return -1
@@ -156,7 +160,7 @@ def run_test(opt):
     cleanup()
 
     # Grab the extensions from server   
-    if get_extensions(opt.serverpath) != 0:
+    if get_extensions(opt.serverpath, opt.version) != 0:
         cleanup()
         return "[Error] Extensions could not be downloaded. Check that '" + opt.serverpath + "' exists and run 'fb_update.py' on the server"
 
