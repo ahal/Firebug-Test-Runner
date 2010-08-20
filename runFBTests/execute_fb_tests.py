@@ -57,14 +57,18 @@ def clean_temp_folder(tempdir, build):
     """
     Clean the temporary directory
     """
-    bundle = os.path.join(tempdir, "mozilla-" + build + (".zip" if platform.system().lower()=="windows" else ".tar.bz2"))
-    if os.path.isfile(bundle):
-        os.remove(bundle)
-    if os.path.isdir(os.path.join(tempdir, "mozilla-" + build)):
-        shutil.rmtree(os.path.join(tempdir, "mozilla-" + build))
-    for filename in os.listdir(tempdir):
-        if os.path.isdir(os.path.join(tempdir, filename)) and filename[0:3] == "tmp":            
-            shutil.rmtree(os.path.join(tempdir,filename))
+    try:
+        bundle = os.path.join(tempdir, "mozilla-" + build + (".zip" if platform.system().lower()=="windows" else ".tar.bz2"))
+        if os.path.isfile(bundle):
+            os.remove(bundle)
+        if os.path.isdir(os.path.join(tempdir, "mozilla-" + build)):
+            shutil.rmtree(os.path.join(tempdir, "mozilla-" + build))
+        for filename in os.listdir(tempdir):
+            if os.path.isdir(os.path.join(tempdir, filename)) and filename[0:3] == "tmp":            
+                shutil.rmtree(os.path.join(tempdir,filename))
+    except Exception as e:
+        return e
+    return 0
 
 def build_needed(build, buildpath):
     """
@@ -136,7 +140,9 @@ def run_builds(argv, opt, basedir):
                 print ret
                 
         # Remove build directories and temp files
-        clean_temp_folder(basedir, build)
+        ret = clean_temp_folder(basedir, build)
+        if ret != 0:
+            print "[Warn] Could not delete temporary files in '" + basedir + "': " + str(ret)
         
     return 0
 
