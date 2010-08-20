@@ -42,7 +42,7 @@ desc = """Scripts for running the Firebug Unit Tests against various Mozilla bui
 summ = """Scripts for running the Firebug Unit Tests against various Mozilla builds"""
 
 PACKAGE_NAME = "runFBTests"
-PACKAGE_VERSION = "1.0.2"
+PACKAGE_VERSION = "1.0.0"
 
 deps = ["mozrunner == 2.4.3",
         "couchquery >= 0.9",

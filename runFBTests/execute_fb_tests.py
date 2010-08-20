@@ -198,7 +198,7 @@ def main(argv):
             break;
             
         # Wait for specified number of hours
-        print "[Info] Sleeping for " + str(waitTime) + " hour" + ("s" if opt.waitTime > 1 else "")
+        print "[Info] Sleeping for " + str(opt.waitTime) + " hour" + ("s" if opt.waitTime > 1 else "")
         sleep(opt.waitTime * 3600)
         
     
