@@ -198,8 +198,8 @@ def main(argv):
             break;
             
         # Wait for specified number of hours
-        print "[Info] Sleeping for " + str(opt.waitTime) + " hour" + ("s" if opt.waitTime > 1 else "")
-        sleep(opt.waitTime * 3600)
+        print "[Info] Sleeping for " + str(opt.waitTime) + " hour" + ("s" if int(opt.waitTime) > 1 else "")
+        sleep(int(opt.waitTime) * 3600)
         
     
 if __name__ == '__main__':
