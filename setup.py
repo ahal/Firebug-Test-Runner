@@ -39,7 +39,8 @@ from setuptools import setup, find_packages
 import sys
 
 desc = """Scripts for running the Firebug Unit Tests against various Mozilla builds"""
-summ = """Scripts for running the Firebug Unit Tests against various Mozilla builds"""
+summ = """This tool will allow you to automate the process of running the Firebug test suite in
+a variety of different configurations."""
 
 PACKAGE_NAME = "runFBTests"
 PACKAGE_VERSION = "1.0.2"
