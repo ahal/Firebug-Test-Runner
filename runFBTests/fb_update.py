@@ -68,7 +68,7 @@ def update(opt):
     
     # Parse the config file
     test_bot = ConfigParser()
-    test_bot.read("files/" + configDir)
+    test_bot.read(os.path.join(opt.repo, configDir))
     
     # For each section in config file, download specified files and move to webserver
     for section in test_bot.sections():
@@ -78,7 +78,7 @@ def update(opt):
         FBTEST_XPI = test_bot.get(section, "FBTEST_XPI")
         
         # Update or create the svn test repository
-        if not os.path.isdir(os.path.join("files", ".svn")):
+        if not os.path.isdir(os.path.join(opt.repo, ".svn")):
             os.system("svn co http://fbug.googlecode.com/svn/tests/ " + os.path.join(opt.repo, "tests") + " -r " + SVN_REVISION)
         else:
             os.system(os.path.join(opt.repo, "svn") + " update -r " + SVN_REVISION)
@@ -96,12 +96,14 @@ def main(argv):
     parser.add_option("-d", "--document-root", dest="serverpath",
                       default="/var/www",
                       help="Path to the Apache2 document root Firebug directory")
+                    
     parser.add_option("--repo", dest="repo",
                       default=os.path.join(os.getcwd(), "files"),
                       help="Location to create or update the local FBTest repository")
+                    
     parser.add_option("-i", "--interval", dest="waitTime",
-                      default=12,
                       help="The number of hours to wait between checking for updates")
+                    
     (opt, remainder) = parser.parse_args(argv)
     
     if not os.path.exists(opt.repo):
@@ -110,8 +112,11 @@ def main(argv):
     while (1):
         print "[INFO] Updating server extensions and tests"
         update(opt)
-        print "[INFO] Sleeping for " + str(opt.waitTime) + " hour" + ("s" if int(opt.waitTime) > 1 else "")
-        sleep(int(opt.waitTime) * 3600)
+        if opt.waitTime != None:
+            print "[INFO] Sleeping for " + str(opt.waitTime) + " hour" + ("s" if int(opt.waitTime) > 1 else "")
+            sleep(int(opt.waitTime) * 3600)
+        else:
+            break;
 
 
 if __name__ == '__main__':

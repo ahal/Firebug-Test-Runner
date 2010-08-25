@@ -53,19 +53,20 @@ else:
 # Global changeset variable
 changeset = {}
 
-def clean_temp_folder(tempdir, build):
+def clean_temp_folder(tempdir, build=False):
     """
     Clean the temporary directory
     """
     try:
-        bundle = os.path.join(tempdir, "mozilla-" + build + (".zip" if platform.system().lower()=="windows" else ".tar.bz2"))
-        if os.path.isfile(bundle):
-            os.remove(bundle)
-        if os.path.isdir(os.path.join(tempdir, "mozilla-" + build)):
-            shutil.rmtree(os.path.join(tempdir, "mozilla-" + build))
+        if build:
+            bundle = os.path.join(tempdir, "mozilla-" + build + (".zip" if platform.system().lower()=="windows" else ".tar.bz2"))
+            if os.path.isfile(bundle):
+                os.remove(bundle)
+            if os.path.isdir(os.path.join(tempdir, "mozilla-" + build)):
+                shutil.rmtree(os.path.join(tempdir, "mozilla-" + build))
         for filename in os.listdir(tempdir):
             if os.path.isdir(os.path.join(tempdir, filename)) and filename[0:3] == "tmp":            
-                shutil.rmtree(os.path.join(tempdir,filename))
+                shutil.rmtree(os.path.join(tempdir, filename))
     except Exception as e:
         return e
     return 0
@@ -85,30 +86,14 @@ def build_needed(build, buildpath):
         return True
     return False
 
-def run_builds(argv, opt, basedir):
+def prepare_builds(argv, opt, basedir, builds):
     """
-    Runs the firefox tests
+    Downloads the builds and starts the tests
     """
     # Lookup table mapping Firefox versions to Gecko versions
     lookup = { '3.5' : '1.9.1', '3.6' : '1.9.2', '3.7' : 'central', '4.0' : 'central' }
-    # Download test-bot.config to see which versions of Firefox to run the FBTests against
-    opt.serverpath = ("" if opt.serverpath[0:7] == "http://" else "http://") + opt.serverpath
-    opt.serverpath += ("" if opt.serverpath[-1] == "/" else "/")
-    if fb_run.retrieve_url(opt.serverpath + "releases/firebug/test-bot.config", "test-bot.config") != 0:
-        return "[Error] Could not download 'test-bot.config' from '" + opt.serverpath + "'"
-    
-    config = ConfigParser()
-    config.read("test-bot.config")
-    
-    builds = config.get("Firebug" + opt.version, "FIREFOX_VERSION").split(",")
-    # Grab the testlist specified in test-bot.config
-    try:
-        testlist = config.get("Firebug" + opt.version, "TEST_LIST")
-        testlist = testlist.replace("http://getfirebug.com/", opt.serverpath)
-    except:
-        testlist = None
-        pass
-    os.remove("test-bot.config")
+
+
     ret = 0
     # For each version of Firefox, see if it needs to be rebuilt and call fb_run to run the tests
     for build in builds:
@@ -131,13 +116,12 @@ def run_builds(argv, opt, basedir):
             continue
         
         if build_needed(build, os.path.join(saveLocation, "firefox/")):
-            # Run fb_run with synthesized argv
-            if opt.testlist == None and testlist != None:
-                argv[-3] = testlist
             argv[-1] = os.path.join(saveLocation, "firefox", "firefox" + (".exe" if platform.system().lower()=="windows" else ""))
             ret = fb_run.main(argv)
             if ret != 0:
                 print ret
+        else:
+            print "[Info] Tests already run with this changeset"
                 
         # Remove build directories and temp files
         ret = clean_temp_folder(basedir, build)
@@ -147,10 +131,17 @@ def run_builds(argv, opt, basedir):
     return 0
 
 def main(argv):
+    """
+    Module initialization and loop
+    """
+    
     usage = "%prog [options]"
     parser = optparse.OptionParser(usage)
     parser.add_option("-p", "--profile", dest="profile",
                       help="The profile to use when running Firefox")
+                    
+    parser.add_option("-b", "--binary", dest="binary",
+                      help="The binary path to use. If unspecified appropriate binaries will be downloaded automatically")
                         
     parser.add_option("-s", "--serverpath", dest="serverpath",
                       default="http://getfirebug.com",
@@ -171,26 +162,52 @@ def main(argv):
     parser.add_option("--interval", dest="waitTime",
                       help="Number of hours to wait between test runs. If unspecified tests are only run once")
     (opt, remainder) = parser.parse_args(argv)
+
+    # Ensure serverpath has correct format
+    opt.serverpath = ("" if opt.serverpath[0:7] == "http://" else "http://") + opt.serverpath
+    opt.serverpath += ("" if opt.serverpath[-1] == "/" else "/")    
     
-    # Synthesize arguments to be passed to fb_run
-    if opt.testlist == None:
+     
+    
+    # Download test-bot.config to see which versions of Firefox to run the FBTests against
+    if fb_run.retrieve_url(opt.serverpath + "releases/firebug/test-bot.config", "test-bot.config") != 0:
+        print "[Error] Could not download 'test-bot.config' from '" + opt.serverpath + "'"
+    
+    config = ConfigParser()
+    config.read("test-bot.config")
+    
+    # Grab builds and testlist from config
+    if not opt.testlist:
+        testlist = config.get("Firebug" + opt.version, "TEST_LIST")
+        testlist = testlist.replace("http://getfirebug.com/", opt.serverpath)
         argv.append("-t")
-        argv.append("testlist")     # Placeholder    
-    argv.append("-b")
-    argv.append("buildpath")        # Placeholder
+        argv.append(testlist)
+    if not opt.binary:
+        builds = config.get("Firebug" + opt.version, "FIREFOX_VERSION").split(",")
+        argv.append("-b")
+        argv.append("buildpath")  # Placeholder
+        
+    os.remove("test-bot.config")
+    
+    # Remove waitTime as fb_run doesn't use it    
     if opt.waitTime:
         index = argv.index("--interval")
         argv.pop(index + 1)
         argv.pop(index)
+        
     # Temporary directory to store tinderbox builds and temporary profiles
     tempdir = tempfile.gettempdir();
 
-    ret = True
-    while ret != "quit":
+    while 1:
         print "[Info] Starting builds and FBTests for Firebug" + opt.version
         
-        # Run the builds and catch any exceptions that may have been missed
-        ret = run_builds(argv, opt, tempdir)
+        # Run the build(s)
+        if not opt.binary:
+            ret = prepare_builds(argv, opt, tempdir, builds)
+        else:
+            ret = fb_run.main(argv)
+            clean_temp_folder(tempdir)
+            
         if ret != 0:
             print ret
         

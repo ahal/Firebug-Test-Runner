@@ -237,7 +237,7 @@ def run_test(opt):
         print "[Info] Sending log file to couchdb at '" + opt.couchserveruri + "'"
         if fb_logs.main(["--log", filename, "--database", opt.databasename, "--couch", opt.couchserveruri,
                          "--changeset", get_changeset(os.path.dirname(opt.binary))]) != 0:
-            return "[Error] Log file not sent to couchdb at server: '" + opt.couchserveruri + "' and database: '" + opt.databasename + "'" 
+            print "[Error] Log file not sent to couchdb at server: '" + opt.couchserveruri + "' and database: '" + opt.databasename + "'" 
         
     # Cleanup
     mozrunner.kill_process_by_name("crashreporter" + (".exe" if platform.system().lower() == "windows" else ""))
