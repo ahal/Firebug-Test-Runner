@@ -189,8 +189,7 @@ def run_test(opt):
     # Create profile for mozrunner and start the Firebug tests
     print "[Info] Starting FBTests"
     try:
-        profile = mozrunner.FirefoxProfile(profile=opt.profile, create_new=True if opt.profile == None else False,
-                                           addons=["firebug.xpi", "fbtest.xpi"])
+        profile = mozrunner.FirefoxProfile(profile=opt.profile, addons=["firebug.xpi", "fbtest.xpi"])
 
         # Disable the compatibility check on startup
         if disable_compatibilityCheck(profile.profile) != 0:

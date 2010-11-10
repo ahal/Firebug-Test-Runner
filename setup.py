@@ -45,7 +45,7 @@ a variety of different configurations."""
 PACKAGE_NAME = "runFBTests"
 PACKAGE_VERSION = "1.0.2"
 
-deps = ["mozrunner == 2.4.3",
+deps = ["mozrunner == 2.5.2",
         "couchquery >= 0.9",
         "lxml >= 2.2.2",]
 

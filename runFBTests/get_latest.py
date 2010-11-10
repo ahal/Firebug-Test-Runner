@@ -40,14 +40,11 @@
 import lxml.html
 import re
 import sys
-import platform
 
-if platform.system().lower() == "windows":
-    REGEX = re.compile(r'firefox-.*\.en-US\.win(32|64)\.zip')
-elif platform.system().lower() == "linux":
-    REGEX = re.compile(r'firefox-.*\.en-US\.linux-(i686|x86_64)\.tar\.bz2')
-else:
-    REGEX = re.compile(r'firefox-.*\.en-US\.linux-(i686|x86_64)\.tar\.bz2')
+REGEX = re.compile(r'firefox-.*\.en-US\..*\.tar\.bz2')
+WIN32REGEX = re.compile(r'firefox-.*\.en-US\.win32(\.tar\.bz2|\.zip)')
+# TODO: The mac one is untested
+MACOSXREGEX = re.compile(r'firefox-.*\.en-US\.mac\.dmg')
 
 def builds(url):
   element = lxml.html.parse(url)
@@ -66,30 +63,35 @@ def builds(url):
   return builds
 
 def latest_build_url(url):
-  _builds = builds(url)
-  latest = max(_builds.keys())
-  build_info = _builds[latest]
-  element = lxml.html.parse(build_info)
-  links = element.xpath('//a[@href]')
-  for link in links:
-    href = link.get('href')
-    if REGEX.match(href):
-      return '%s/%s' % (build_info.rstrip('/'), href)
-
-def find_platform():
-  """returns string of platform, as displayed for buildbot builds"""
-  # XXX this should use the same code as buildbot
-  bits, linkage = platform.architecture()
-  bits = bits[0:2]
-  os = platform.system().lower()
-  if os == 'linux' or os == 'linux2':
-    return 'linux' + (bits if bits=='64' else '')
-  elif os == 'windows' or os == 'win32':
-    return 'win32'
-  elif os == 'darwin' or os == 'macosx':
-    raise NotImplementedError
+  if sys.platform == 'linux2':
+    buildregex = REGEX
+  elif sys.platform == 'win32':
+    buildregex = WIN32REGEX
+  elif sys.platform == 'darwin':
+    buildregex = MACOSXREGEX
   else:
     raise NotImplementedError
+  _builds = builds(url)
+  for latest in sorted(_builds.keys(), reverse=True):
+    build_info = _builds[latest]
+    element = lxml.html.parse(build_info)
+    links = element.xpath('//a[@href]')
+    for link in links:
+      href = link.get('href')
+      if buildregex.match(href):
+        return '%s/%s' % (build_info.rstrip('/'), href)
+
+def platform():
+  """returns string of platform, as displayed for buildbot builds"""
+  # XXX this should use the same code as buildbot
+
+  if sys.platform == 'linux2':
+    return 'linux'
+  elif sys.platform == 'win32':
+    return 'win32'
+  elif sys.platform == 'darwin':
+    return 'macosx'
+  raise NotImplementedError
 
 def main(args=sys.argv[1:]):
 
@@ -100,7 +102,7 @@ def main(args=sys.argv[1:]):
                     action='store_true', default=False,
                     help="get a debug build")
   try:
-    client_platform = find_platform()
+    client_platform = platform()
   except NotImplementedError:
     client_platform = None
   platform_help = 'platform (linux, linux64, win32, macosx, macosx64, etc)'
@@ -117,14 +119,14 @@ def main(args=sys.argv[1:]):
     parser.error('Specify your platform')
 
   # build the base URL
-  BASE_URL = 'http://stage.mozilla.org/pub/mozilla.org/firefox/tinderbox-builds/mozilla-central-linux/'
   BASE_URL = 'http://stage.mozilla.org/pub/mozilla.org/firefox/tinderbox-builds/'
   BASE_URL += options.product + '-' + options.platform
   if options.debug:
     BASE_URL += '-debug'
   BASE_URL += '/'
 
-  return latest_build_url(BASE_URL)
+  rtnUrl = latest_build_url(BASE_URL)
+  return rtnUrl
 
 if __name__ == '__main__':
   main()
