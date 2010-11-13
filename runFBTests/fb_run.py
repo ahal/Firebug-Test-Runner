@@ -66,6 +66,7 @@ def retrieve_url(url, filename):
     try:
         ret = urllib2.urlopen(url)
     except:
+        print "[Error] Could not download the file at '" + url + "'"
         return -1
     dir = os.path.dirname(filename)
     if dir and not os.path.exists(dir):
@@ -117,8 +118,8 @@ def create_log(profile, opt):
         file = open(os.path.join(profile, "firebug/firebug-test.log"), "w")        
         file.writelines(content)
         return file
-    except:
-        return -1
+    except Exception as e:
+        print "[Warn] Failed to synthesize log file: " + str(e)
     
 def get_extensions(serverpath, version):
     """
@@ -148,9 +149,8 @@ def disable_compatibilityCheck(profile):
         prefs.write("user_pref(\"extensions.checkCompatibility.4.0\", false);\n")
         prefs.write("user_pref(\"extensions.checkCompatibility.3.6\", false);\n")
         prefs.close();
-    except:
-        return -1
-    return 0
+    except Exception as e:
+        print "[Warn] Could not disable compatibility check: " + str(e)
     
 def run_test(opt):
     if opt.profile != None:
@@ -177,7 +177,8 @@ def run_test(opt):
     # Grab the extensions from server   
     if get_extensions(opt.serverpath, opt.version) != 0:
         cleanup()
-        return "[Error] Extensions could not be downloaded. Check that '" + opt.serverpath + "' exists and run 'fb_update.py' on the server"
+        print "[Error] Extensions could not be downloaded. Check that '" + opt.serverpath + "' exists and run 'fb_update.py' on the server"
+        return
 
     # Create environment variables
     dict = os.environ
@@ -192,15 +193,15 @@ def run_test(opt):
         profile = mozrunner.FirefoxProfile(profile=opt.profile, addons=["firebug.xpi", "fbtest.xpi"])
 
         # Disable the compatibility check on startup
-        if disable_compatibilityCheck(profile.profile) != 0:
-            print "[Warn] Could not disable compatibility check"
+        disable_compatibilityCheck(profile.profile)
         
         runner = mozrunner.FirefoxRunner(binary=opt.binary, profile=profile, 
                                          cmdargs=["-runFBTests", opt.testlist], env=dict)
         runner.start()
     except Exception as e:
         cleanup()
-        return "[Error] Could not start Firefox: " + str(e)
+        print "[Error] Could not start Firefox: " + str(e)
+        return
 
     # Find the log file
     timeout, file = 0, 0
