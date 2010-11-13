@@ -38,7 +38,7 @@
 from time import sleep
 from ConfigParser import ConfigParser
 import fb_run
-import get_latest
+import getlatesttinderbox as get_latest
 import os, sys
 import optparse
 import shutil
@@ -68,8 +68,7 @@ def clean_temp_folder(tempdir, build=False):
             if os.path.isdir(os.path.join(tempdir, filename)) and filename[0:3] == "tmp":            
                 shutil.rmtree(os.path.join(tempdir, filename))
     except Exception as e:
-        return e
-    return 0
+        print "[Warn] Could not delete temporary files in '" + basedir + "': " + str(ret)
 
 def build_needed(build, buildpath):
     """
@@ -116,17 +115,14 @@ def prepare_builds(argv, opt, basedir, builds):
             continue
         
         if build_needed(build, os.path.join(saveLocation, "firefox/")):
+            # Set the build path (in argv)
             argv[-1] = os.path.join(saveLocation, "firefox", "firefox" + (".exe" if platform.system().lower()=="windows" else ""))
-            ret = fb_run.main(argv)
-            if ret != 0:
-                print ret
+            fb_run.main(argv)
         else:
             print "[Info] Tests already run with this changeset"
                 
         # Remove build directories and temp files
-        ret = clean_temp_folder(basedir, build)
-        if ret != 0:
-            print "[Warn] Could not delete temporary files in '" + basedir + "': " + str(ret)
+        clean_temp_folder(basedir, build)
         
     return 0
 
