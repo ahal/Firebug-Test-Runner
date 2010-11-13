@@ -66,7 +66,7 @@ def retrieve_url(url, filename):
     try:
         ret = urllib2.urlopen(url)
     except:
-        print "[Error] Could not download the file at '" + url + "'"
+        print "[Error] Could not download the file at '" + str(url) + "'"
         return -1
     dir = os.path.dirname(filename)
     if dir and not os.path.exists(dir):
