@@ -182,7 +182,7 @@ def run_test(opt):
 
     # Create environment variables
     dict = os.environ
-    dict["XPC_DEBUG_WARN"] = "warn"
+    dict["XPC_DEBUG_WARN"] = "warn"     # Suppresses certain alert warnings that may sometimes appear
 
     # If firefox is running, kill it (needed for mozrunner)
     mozrunner.kill_process_by_name("firefox" + (".exe" if platform.system().lower() == "windows" else "-bin"))
@@ -191,7 +191,7 @@ def run_test(opt):
     print "[Info] Starting FBTests"
     try:
         profile = mozrunner.FirefoxProfile(profile=opt.profile, addons=["firebug.xpi", "fbtest.xpi"])
-
+        
         # Disable the compatibility check on startup
         disable_compatibilityCheck(profile.profile)
         

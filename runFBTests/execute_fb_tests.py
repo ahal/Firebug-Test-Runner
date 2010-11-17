@@ -38,10 +38,10 @@
 from time import sleep
 from ConfigParser import ConfigParser
 import fb_run
-import getlatesttinderbox as get_latest
 import os, sys
 import optparse
 import shutil
+import subprocess
 import tempfile
 import platform
 
@@ -89,24 +89,29 @@ def prepare_builds(argv, opt, basedir, builds):
     """
     Downloads the builds and starts the tests
     """
-    # Lookup table mapping Firefox versions to Gecko versions
+    # Lookup table mapping Firefox versions to Gecko versions (as specified in Firebug's test-bot.config)
     lookup = { '3.5' : '1.9.1', '3.6' : '1.9.2', '3.7' : 'central', '4.0' : 'central' }
 
-
-    ret = 0
     # For each version of Firefox, see if it needs to be rebuilt and call fb_run to run the tests
     for build in builds:
         build = lookup[build]
         print "[Info] Running Firebug" + opt.version + " tests against Mozilla " + build
 
+        # Scrape for the latest tinderbox build and extract it to the basedir
         try:
-            # Scrape for the latest tinderbox build and extract it to the basedir
+            # Location to save the tinderbox build
             saveLocation = os.path.join(basedir, "mozilla-" + build);
+            
+            # Get the url to the latest tinderbox build
+            proc = subprocess.Popen("get-latest-tinderbox --product=mozilla-" + build, shell=True, stdout=subprocess.PIPE)
+            tinderbox_url = proc.communicate()[0]
+            
+            # Download and extract the tinderbox build
             if platform.system().lower() == "windows":
-                fb_run.retrieve_url(get_latest.main(["--product=mozilla-" + build]), saveLocation + ".zip")
+                fb_run.retrieve_url(tinderbox_url, saveLocation + ".zip")
                 bundle = zipfile.ZipFile(saveLocation + ".zip")
             else:
-                fb_run.retrieve_url(get_latest.main(["--product=mozilla-" + build]), saveLocation + ".tar.bz2")
+                fb_run.retrieve_url(tinderbox_url, saveLocation + ".tar.bz2")
                 bundle = tarfile.open(saveLocation + ".tar.bz2")
             bundle.extractall(saveLocation)
             bundle.close()
@@ -114,6 +119,7 @@ def prepare_builds(argv, opt, basedir, builds):
             print "[Error] Could not grab the latest tinderbox build: " + str(e)
             continue
         
+        # If the newest tinderbox changeset is different from the previously run changeset
         if build_needed(build, os.path.join(saveLocation, "firefox/")):
             # Set the build path (in argv)
             argv[-1] = os.path.join(saveLocation, "firefox", "firefox" + (".exe" if platform.system().lower()=="windows" else ""))
