@@ -144,7 +144,7 @@ def disable_compatibilityCheck(profile):
     potentially prompt the user for action
     """
     try:
-        prefs = open(os.path.join(profile, "prefs.js"), "wa")
+        prefs = open(os.path.join(profile, "prefs.js"), "a")
         prefs.write("user_pref(\"extensions.checkCompatibility.4.0b\", false);\n")
         prefs.write("user_pref(\"extensions.checkCompatibility.4.0\", false);\n")
         prefs.write("user_pref(\"extensions.checkCompatibility.3.6\", false);\n")
