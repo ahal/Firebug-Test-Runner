@@ -85,7 +85,7 @@ def build_needed(build, buildpath):
         return True
     return False
 
-def prepare_builds(argv, opt, basedir, builds):
+def prepare_builds(argv, version, basedir, builds):
     """
     Downloads the builds and starts the tests
     """
@@ -95,7 +95,7 @@ def prepare_builds(argv, opt, basedir, builds):
     # For each version of Firefox, see if it needs to be rebuilt and call fb_run to run the tests
     for build in builds:
         build = lookup[build]
-        print "[Info] Running Firebug" + opt.version + " tests against Mozilla " + build
+        print "[Info] Running Firebug" + version + " tests against Mozilla " + build
 
         # Scrape for the latest tinderbox build and extract it to the basedir
         try:
@@ -122,7 +122,8 @@ def prepare_builds(argv, opt, basedir, builds):
         # If the newest tinderbox changeset is different from the previously run changeset
         if build_needed(build, os.path.join(saveLocation, "firefox/")):
             # Set the build path (in argv)
-            argv[-1] = os.path.join(saveLocation, "firefox", "firefox" + (".exe" if platform.system().lower()=="windows" else ""))
+            argv.append("-b")
+            argv.append(os.path.join(saveLocation, "firefox", "firefox" + (".exe" if platform.system().lower()=="windows" else "")))
             fb_run.main(argv)
         else:
             print "[Info] Tests already run with this changeset"
@@ -150,7 +151,6 @@ def main(argv):
                       help="The http server containing the firebug tests")
                         
     parser.add_option("-v", "--version", dest="version",
-                      default="1.6",
                       help="The firebug version to run")
                         
     parser.add_option("-c", "--couch", dest="couchserveruri",
@@ -161,65 +161,77 @@ def main(argv):
                         
     parser.add_option("-t", "--testlist", dest="testlist",
                       help="Url to the testlist to use")
+                      
     parser.add_option("--interval", dest="waitTime",
                       help="Number of hours to wait between test runs. If unspecified tests are only run once")
     (opt, remainder) = parser.parse_args(argv)
 
     # Ensure serverpath has correct format
     opt.serverpath = ("" if opt.serverpath[0:7] == "http://" else "http://") + opt.serverpath
-    opt.serverpath += ("" if opt.serverpath[-1] == "/" else "/")    
+    opt.serverpath += ("" if opt.serverpath[-1] == "/" else "/")
     
-     
-    
-    # Download test-bot.config to see which versions of Firefox to run the FBTests against
-    if fb_run.retrieve_url(opt.serverpath + "releases/firebug/test-bot.config", "test-bot.config") != 0:
-        print "[Error] Could not download 'test-bot.config' from '" + opt.serverpath + "'"
-    
-    config = ConfigParser()
-    config.read("test-bot.config")
-    
-    # Grab builds and testlist from config
-    if not opt.testlist:
-        testlist = config.get("Firebug" + opt.version, "TEST_LIST")
-        testlist = testlist.replace("http://getfirebug.com/", opt.serverpath)
-        argv.append("-t")
-        argv.append(testlist)
-    if not opt.binary:
-        builds = config.get("Firebug" + opt.version, "FIREFOX_VERSION").split(",")
-        argv.append("-b")
-        argv.append("buildpath")  # Placeholder
+    # Temporary directory to store tinderbox builds and temporary profiles
+    tempdir = tempfile.gettempdir();
         
-    os.remove("test-bot.config")
-    
-    # Remove waitTime as fb_run doesn't use it    
+    # Remove waitTime as fb_run doesn't use it
     if opt.waitTime:
         index = argv.index("--interval")
         argv.pop(index + 1)
         argv.pop(index)
-        
-    # Temporary directory to store tinderbox builds and temporary profiles
-    tempdir = tempfile.gettempdir();
 
     while 1:
-        print "[Info] Starting builds and FBTests for Firebug" + opt.version
+    
+    	# Download test-bot.config to see which versions of Firefox to run the FBTests against
+    	if fb_run.retrieve_url(opt.serverpath + "releases/firebug/test-bot.config", "test-bot.config") != 0:
+    	    print "[Error] Could not download 'test-bot.config' from '" + opt.serverpath + "'"
         
-        # Run the build(s)
-        if not opt.binary:
-            ret = prepare_builds(argv, opt, tempdir, builds)
-        else:
-            ret = fb_run.main(argv)
-            clean_temp_folder(tempdir)
+        config = ConfigParser()
+        config.read("test-bot.config")
+        
+        for section in config.sections():
+            version = section[-3:]
+            if not opt.version:
+                if argv.count("-v") == 0:
+                    argv.append("-v")
+                    argv.append(version)
+                else:
+                    index = argv.index("-v")
+                    argv[index + 1] = version
             
-        if ret != 0:
-            print ret
+            if not opt.version or version == opt.version:
+                if not opt.testlist:
+                    testlist = config.get("Firebug" + version, "TEST_LIST")
+                    testlist = testlist.replace("http://getfirebug.com/", opt.serverpath)
+                    argv.append("-t")
+                    argv.append(testlist)
+                if not opt.binary:
+                    builds = config.get("Firebug" + version, "FIREFOX_VERSION").split(",")
+    		                    
+                print "[Info] Starting builds and FBTests for Firebug" + version
+        		
+                # Run the build(s)
+                if not opt.binary:
+                    ret = prepare_builds(argv, version, tempdir, builds)
+                else:
+        		    ret = fb_run.main(argv)
+        		    
+                clean_temp_folder(tempdir)
+        		    
+                if ret != 0:
+                    print ret
+        		
         
         if not opt.waitTime:
             break;
-            
+        
         # Wait for specified number of hours
         print "[Info] Sleeping for " + str(opt.waitTime) + " hour" + ("s" if int(opt.waitTime) > 1 else "")
         sleep(int(opt.waitTime) * 3600)
         
-    
+        if os.path.isfile("test-bot.config"):
+            os.remove("test-bot.config")
+        
+        
+        
 if __name__ == '__main__':
     main(sys.argv[1:])
