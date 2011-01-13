@@ -94,7 +94,8 @@ def get_changeset(buildpath):
     Return the changeset of the build located at 'buildpath'
     """
     app_ini = ConfigParser()
-    app_ini.read(os.path.join(buildpath, "application.ini"))
+    appPath = os.path.join(buildpath, ("Contents/MacOS" if platform.system().lower() == "darwin" else ""))
+    app_ini.read(os.path.join(appPath, "application.ini"))
     return app_ini.get("App", "SourceStamp")
 
 def create_log(profile, opt):
@@ -277,6 +278,9 @@ def main(argv):
                       help="Specify the name of the testlist to use, should usually use the default")
     parser.add_option("-i", dest="waitTime")
     (opt, remainder) = parser.parse_args(argv)
+    
+    print platform.system()
+    print get_changeset(opt.binary)
     
     return run_test(opt)
 
