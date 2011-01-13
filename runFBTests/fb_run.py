@@ -51,13 +51,16 @@ def cleanup():
     """
     Remove temporarily downloaded files
     """
-    "Perform cleanup and exit"
-    if os.path.exists("firebug.xpi"):
-        os.remove("firebug.xpi")
-    if os.path.exists("fbtest.xpi"):
-        os.remove("fbtest.xpi")
-    if os.path.exists("test-bot.config"):
-        os.remove("test-bot.config")
+    try:
+        "Perform cleanup and exit"
+        if os.path.exists("firebug.xpi"):
+            os.remove("firebug.xpi")
+        if os.path.exists("fbtest.xpi"):
+            os.remove("fbtest.xpi")
+        if os.path.exists("test-bot.config"):
+            os.remove("test-bot.config")
+    except Exception as e:
+        print "[Warn] Could not clean up temporary files: " + str(e)        
         
 def retrieve_url(url, filename):
     """
@@ -191,7 +194,7 @@ def run_test(opt):
     print "[Info] Starting FBTests"
     try:
         profile = mozrunner.FirefoxProfile(profile=opt.profile, addons=["firebug.xpi", "fbtest.xpi"])
-        
+                
         # Disable the compatibility check on startup
         disable_compatibilityCheck(profile.profile)
         

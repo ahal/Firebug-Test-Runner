@@ -84,8 +84,21 @@ def update(opt):
             os.system(os.path.join(opt.repo, "svn") + " update -r " + SVN_REVISION)
         
         # Download the extensions
-        retrieve_url(FIREBUG_XPI, os.path.join(opt.repo, FIREBUG_XPI[FIREBUG_XPI.find("getfirebug.com/")+15:]))
-        retrieve_url(FBTEST_XPI, os.path.join(opt.repo, FBTEST_XPI[FBTEST_XPI.find("getfirebug.com/")+15:]))
+        print FIREBUG_XPI
+        if (FIREBUG_XPI.find("http://") != -1):           
+            index = FIREBUG_XPI[7:].find("/") + 7
+        else:
+            index = FIREBUG_XPI.find("/")
+        savePath = os.path.join(opt.repo, FIREBUG_XPI[index+1:])
+        retrieve_url(FIREBUG_XPI, savePath)
+        
+        print FBTEST_XPI
+        if (FBTEST_XPI.find("http://") != -1):
+            index = FBTEST_XPI[7:].find("/") + 7
+        else:
+            index = FBTEST_XPI.find("/")
+        savePath = os.path.join(opt.repo, FBTEST_XPI[index+1:])
+        retrieve_url(FBTEST_XPI, savePath)
         
         # Copy the files to the webserver
         os.system("cp -r " + os.path.join(opt.repo, "*") + " " + opt.serverpath)
@@ -110,13 +123,16 @@ def main(argv):
         os.mkdir(opt.repo)
 
     while (1):
-        print "[INFO] Updating server extensions and tests"
-        update(opt)
-        if opt.waitTime != None:
-            print "[INFO] Sleeping for " + str(opt.waitTime) + " hour" + ("s" if int(opt.waitTime) > 1 else "")
-            sleep(int(opt.waitTime) * 3600)
-        else:
-            break;
+        try:
+            print "[INFO] Updating server extensions and tests"
+            update(opt)
+            if opt.waitTime != None:
+                print "[INFO] Sleeping for " + str(opt.waitTime) + " hour" + ("s" if int(opt.waitTime) > 1 else "")
+                sleep(int(opt.waitTime) * 3600)
+            else:
+                break;
+        except Exception(e):
+            print "[Error] Could not update the server files: " + str(e)
 
 
 if __name__ == '__main__':
