@@ -59,8 +59,8 @@ def clean_temp_folder(tempdir, build=False):
     """
     try:
         if build:
-        	if platform.system().lower() != "darwin":
-            	bundle = os.path.join(tempdir, "mozilla-" + build + ".zip" if platform.system().lower()=="windows" else ".tar.bz2"))
+            if platform.system().lower() != "darwin":
+                bundle = os.path.join(tempdir, "mozilla-" + build + ".zip" if platform.system().lower()=="windows" else ".tar.bz2"))
                 if os.path.isfile(bundle):
                     os.remove(bundle)
             if os.path.isdir(os.path.join(tempdir, "mozilla-" + build)):
@@ -109,8 +109,8 @@ def prepare_builds(argv, version, basedir, builds):
             
             # Download and extract the tinderbox build
             if platform.system().lower() == "darwin":
-            	fb_run.retrieve_url(tinderbox_url, os.path.join(buildPath, "Minefield.dmg"))
-            	subprocess.Popen("hdiutil mount " + os.path.join(buildPath + "Minefield.dmg"), shell=True)
+                fb_run.retrieve_url(tinderbox_url, os.path.join(buildPath, "Minefield.dmg"))
+                subprocess.Popen("hdiutil mount " + os.path.join(buildPath + "Minefield.dmg"), shell=True)
                 subprocess.Popen("cp -r /Volumes/Minefield/Minefield.app " + buildPath, shell=True)
                 subprocess.Popen("hdiutil unmount /Volumes/Minefield", shell=True)
                 buildPath = os.path.join(buildPath, "Minefield.app/Contents/MacOS")
