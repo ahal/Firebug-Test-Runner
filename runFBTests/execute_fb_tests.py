@@ -181,6 +181,7 @@ def main(argv):
     
     # Temporary directory to store tinderbox builds and temporary profiles
     tempdir = tempfile.gettempdir();
+    print "Temp folder: " + tempdir
         
     # Remove waitTime as fb_run doesn't use it
     if opt.waitTime:
