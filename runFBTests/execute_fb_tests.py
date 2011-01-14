@@ -59,9 +59,10 @@ def clean_temp_folder(tempdir, build=False):
     """
     try:
         if build:
-            bundle = os.path.join(tempdir, "mozilla-" + build + (".zip" if platform.system().lower()=="windows" else ".tar.bz2"))
-            if os.path.isfile(bundle):
-                os.remove(bundle)
+        	if platform.system().lower() != "darwin":
+            	bundle = os.path.join(tempdir, "mozilla-" + build + ".zip" if platform.system().lower()=="windows" else ".tar.bz2"))
+                if os.path.isfile(bundle):
+                    os.remove(bundle)
             if os.path.isdir(os.path.join(tempdir, "mozilla-" + build)):
                 shutil.rmtree(os.path.join(tempdir, "mozilla-" + build))
         for filename in os.listdir(tempdir):
@@ -100,30 +101,38 @@ def prepare_builds(argv, version, basedir, builds):
         # Scrape for the latest tinderbox build and extract it to the basedir
         try:
             # Location to save the tinderbox build
-            saveLocation = os.path.join(basedir, "mozilla-" + build);
+            buildPath = os.path.join(basedir, "mozilla-" + build);
             
             # Get the url to the latest tinderbox build
             proc = subprocess.Popen("get-latest-tinderbox --product=mozilla-" + build, shell=True, stdout=subprocess.PIPE)
             tinderbox_url = proc.communicate()[0]
             
             # Download and extract the tinderbox build
-            if platform.system().lower() == "windows":
-                fb_run.retrieve_url(tinderbox_url, saveLocation + ".zip")
-                bundle = zipfile.ZipFile(saveLocation + ".zip")
+            if platform.system().lower() == "darwin":
+            	fb_run.retrieve_url(tinderbox_url, os.path.join(buildPath, "Minefield.dmg"))
+            	subprocess.Popen("hdiutil mount " + os.path.join(buildPath + "Minefield.dmg"), shell=True)
+                subprocess.Popen("cp -r /Volumes/Minefield/Minefield.app " + buildPath, shell=True)
+                subprocess.Popen("hdiutil unmount /Volumes/Minefield", shell=True)
+                buildPath = os.path.join(buildPath, "Minefield.app/Contents/MacOS")
             else:
-                fb_run.retrieve_url(tinderbox_url, saveLocation + ".tar.bz2")
-                bundle = tarfile.open(saveLocation + ".tar.bz2")
-            bundle.extractall(saveLocation)
-            bundle.close()
+                if platform.system().lower() == "windows":
+                    fb_run.retrieve_url(tinderbox_url, buildPath + ".zip")
+                    bundle = zipfile.ZipFile(buildPath + ".zip")
+                else:
+                    fb_run.retrieve_url(tinderbox_url, buildPath + ".tar.bz2")
+                    bundle = tarfile.open(buildPath + ".tar.bz2")
+                bundle.extractall(buildPath)
+                bundle.close()
+                buildPath = os.path.join(buildPath, "firefox")
         except IOError as e:
             print "[Error] Could not grab the latest tinderbox build: " + str(e)
             continue
         
         # If the newest tinderbox changeset is different from the previously run changeset
-        if build_needed(build, os.path.join(saveLocation, "firefox/")):
+        if build_needed(build, buildPath):
             # Set the build path (in argv)
             argv.append("-b")
-            argv.append(os.path.join(saveLocation, "firefox", "firefox" + (".exe" if platform.system().lower()=="windows" else "")))
+            argv.append(os.path.join(buildPath, "firefox" + (".exe" if platform.system().lower()=="windows" else "")))
             fb_run.main(argv)
         else:
             print "[Info] Tests already run with this changeset"
