@@ -60,7 +60,7 @@ def clean_temp_folder(tempdir, build=False):
     try:
         if build:
             if platform.system().lower() != "darwin":
-                bundle = os.path.join(tempdir, "mozilla-" + build + ".zip" if platform.system().lower()=="windows" else ".tar.bz2"))
+                bundle = os.path.join(tempdir, "mozilla-" + build + (".zip" if platform.system().lower()=="windows" else ".tar.bz2"))
                 if os.path.isfile(bundle):
                     os.remove(bundle)
             if os.path.isdir(os.path.join(tempdir, "mozilla-" + build)):
