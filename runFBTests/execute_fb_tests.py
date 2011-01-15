@@ -109,11 +109,22 @@ def prepare_builds(argv, version, basedir, builds):
             
             # Download and extract the tinderbox build
             if platform.system().lower() == "darwin":
-                fb_run.retrieve_url(tinderbox_url, os.path.join(buildPath, "Minefield.dmg"))
-                subprocess.call("hdiutil mount " + os.path.join(buildPath + "Minefield.dmg"), shell=True)
-                subprocess.call("cp -r /Volumes/Minefield/Minefield.app " + buildPath, shell=True)
-                subprocess.call("hdiutil unmount /Volumes/Minefield", shell=True)
-                buildPath = os.path.join(buildPath, "Minefield.app/Contents/MacOS")
+                fb_run.retrieve_url(tinderbox_url, os.path.join(buildPath, "firefox.dmg"))
+                proc = subprocess.Popen("hdiutil mount " + os.path.join(buildPath,  "firefox.dmg"), shell=True, stdout=subprocess.PIPE)
+                for data in proc.communicate()[0].split():
+                    if data.find("/Volumes/") != -1:
+                        appDir = data
+                for files in os.listdir(appDir):
+                    print files
+                    if files[-4:] == ".app":
+                        appName = files
+                        break
+                print "App dir: " + appDir + " Name: " + appName
+                subprocess.call("cp -r " + os.path.join(appDir, appName) + " " + buildPath, shell=True)
+                subprocess.call("hdiutil unmount " + appDir, shell=True)
+                buildPath = os.path.join(buildPath, appName)
+            	print "Buildpath: " + buildPath
+                print os.path.isdir(buildPath)
             else:
                 if platform.system().lower() == "windows":
                     fb_run.retrieve_url(tinderbox_url, buildPath + ".zip")
@@ -132,7 +143,10 @@ def prepare_builds(argv, version, basedir, builds):
         if build_needed(build, buildPath):
             # Set the build path (in argv)
             argv.append("-b")
-            argv.append(os.path.join(buildPath, "firefox" + (".exe" if platform.system().lower()=="windows" else "")))
+            if platform.system().lower() == "darwin":
+                argv.append(buildPath)
+            else:
+                argv.append(os.path.join(buildPath, "firefox" + (".exe" if platform.system().lower()=="windows" else "")))
             fb_run.main(argv)
         else:
             print "[Info] Tests already run with this changeset"

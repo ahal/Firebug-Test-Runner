@@ -208,25 +208,25 @@ def run_test(opt):
         return
 
     # Find the log file
-    timeout, file = 0, 0
+    timeout, logfile = 0, 0
     # Wait up to 5 minutes for the log file to be initialized
-    while not file and timeout < 300:
+    while not logfile and timeout < 300:
         try:
             for name in os.listdir(os.path.join(profile.profile, "firebug/fbtest/logs")):
-                file = open(os.path.join(profile.profile, "firebug/fbtest/logs/", name))
+                logfile = open(os.path.join(profile.profile, "firebug/fbtest/logs/", name))
         except OSError:
             timeout += 1
             mozrunner.sleep(1)
             
     # If log file was not found, create our own log file
-    if not file:
+    if not logfile:
         print "[Error] Could not find the log file in profile '" + profile.profile + "'"
-        file = create_log(profile.profile, opt)
+        logfile = create_log(profile.profile, opt)
     # If log file found, exit when fbtests finished (if no activity, wait up to 10 min)
     else:
         line, timeout = "", 0
         while line.find("Test Suite Finished") == -1 and timeout < 600:
-            line = file.readline()
+            line = logfile.readline()
             if line == "":
                 mozrunner.sleep(1)
                 timeout += 1
@@ -234,13 +234,13 @@ def run_test(opt):
                 timeout = 0
                 
     # Give last two lines of file a chance to write and send log file to fb_logs  
-    if file != -1:
+    if logfile != -1:
         mozrunner.sleep(2)
-        filename = file.name
-        file.close()
+        filename = logfile.name
+        logfile.close()
         print "[Info] Sending log file to couchdb at '" + opt.couchserveruri + "'"
         if fb_logs.main(["--log", filename, "--database", opt.databasename, "--couch", opt.couchserveruri,
-                         "--changeset", get_changeset(os.path.dirname(opt.binary))]) != 0:
+                         "--changeset", get_changeset((opt.binary if platform.system().lower() == "darwin" else os.path.dirname(opt.binary)))]) != 0:
             print "[Error] Log file not sent to couchdb at server: '" + opt.couchserveruri + "' and database: '" + opt.databasename + "'" 
         
     # Cleanup
