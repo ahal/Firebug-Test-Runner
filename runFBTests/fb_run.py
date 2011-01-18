@@ -259,7 +259,7 @@ def main(argv):
                       help="The profile to use when running Firefox")
                         
     parser.add_option("-s", "--serverpath", dest="serverpath", 
-                      default="http://getfirebug.com",
+                      default="https://getfirebug.com",
                       help="The http server containing the firebug tests")
                         
     parser.add_option("-v", "--version", dest="version",
@@ -278,9 +278,6 @@ def main(argv):
                       help="Specify the name of the testlist to use, should usually use the default")
     parser.add_option("-i", dest="waitTime")
     (opt, remainder) = parser.parse_args(argv)
-    
-    print platform.system()
-    print get_changeset(opt.binary)
     
     return run_test(opt)
 

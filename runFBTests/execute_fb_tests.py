@@ -119,12 +119,9 @@ def prepare_builds(argv, version, basedir, builds):
                     if files[-4:] == ".app":
                         appName = files
                         break
-                print "App dir: " + appDir + " Name: " + appName
                 subprocess.call("cp -r " + os.path.join(appDir, appName) + " " + buildPath, shell=True)
                 subprocess.call("hdiutil unmount " + appDir, shell=True)
                 buildPath = os.path.join(buildPath, appName)
-            	print "Buildpath: " + buildPath
-                print os.path.isdir(buildPath)
             else:
                 if platform.system().lower() == "windows":
                     fb_run.retrieve_url(tinderbox_url, buildPath + ".zip")
@@ -136,7 +133,7 @@ def prepare_builds(argv, version, basedir, builds):
                 bundle.close()
                 buildPath = os.path.join(buildPath, "firefox")
         except Exception as e:
-            print "[Error] Could not grab the latest tinderbox build: " + str(e)
+            print "[Error] Could not prepare the latest tinderbox build: " + str(e)
             continue
         
         # If the newest tinderbox changeset is different from the previously run changeset
@@ -195,7 +192,6 @@ def main(argv):
     
     # Temporary directory to store tinderbox builds and temporary profiles
     tempdir = tempfile.gettempdir();
-    print "Temp folder: " + tempdir
         
     # Remove waitTime as fb_run doesn't use it
     if opt.waitTime:
