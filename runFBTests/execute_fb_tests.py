@@ -187,7 +187,7 @@ def main(argv):
     (opt, remainder) = parser.parse_args(argv)
 
     # Ensure serverpath has correct format
-    opt.serverpath = ("" if opt.serverpath[0:7] == "http://" else "http://") + opt.serverpath
+    opt.serverpath = ("" if opt.serverpath[0:7] == "http://" or opt.serverpath[0:8] == "https://" else "http://") + opt.serverpath
     opt.serverpath += ("" if opt.serverpath[-1] == "/" else "/")
     
     # Temporary directory to store tinderbox builds and temporary profiles

@@ -168,7 +168,7 @@ def run_test(opt):
                 os.rename(os.path.join(opt.profile, "firebug/fbtest/logs", name), os.path.join(opt.profile, "firebug/fbtest/logs_old", name))
 
     # Concatenate serverpath based on Firebug version
-    opt.serverpath = ("" if opt.serverpath[0:7] == "http://" else "http://") + opt.serverpath
+    opt.serverpath = ("" if opt.serverpath[0:7] == "http://" or opt.serverpath[0:8] == "https://" else "http://") + opt.serverpath
     opt.serverpath += ("" if opt.serverpath[-1] == "/" else "/")
     
     # Ensure we have a testlist set
