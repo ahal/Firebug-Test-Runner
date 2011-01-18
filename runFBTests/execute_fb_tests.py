@@ -115,7 +115,6 @@ def prepare_builds(argv, version, basedir, builds):
                     if data.find("/Volumes/") != -1:
                         appDir = data
                 for files in os.listdir(appDir):
-                    print files
                     if files[-4:] == ".app":
                         appName = files
                         break
