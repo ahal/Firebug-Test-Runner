@@ -106,9 +106,6 @@ def prepare_builds(argv, version, basedir, builds):
             # Get the url to the latest tinderbox build
             proc = subprocess.Popen("get-latest-tinderbox --product=mozilla-" + build, shell=True, stdout=subprocess.PIPE)
             tinderbox_url = proc.communicate()[0]
-            if not tinderbox_url:
-                print "[Error] Couldn't find a suitable tinderbox build: " + str(e)
-                continue
             
             # Download and extract the tinderbox build
             if platform.system().lower() == "darwin":
@@ -138,7 +135,7 @@ def prepare_builds(argv, version, basedir, builds):
                 bundle.extractall(buildPath)
                 bundle.close()
                 buildPath = os.path.join(buildPath, "firefox")
-        except IOError as e:
+        except Exception as e:
             print "[Error] Could not grab the latest tinderbox build: " + str(e)
             continue
         
