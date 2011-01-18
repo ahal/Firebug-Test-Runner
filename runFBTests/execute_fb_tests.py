@@ -170,7 +170,7 @@ def main(argv):
                       help="The binary path to use. If unspecified appropriate binaries will be downloaded automatically")
                         
     parser.add_option("-s", "--serverpath", dest="serverpath",
-                      default="http://getfirebug.com",
+                      default="https://getfirebug.com",
                       help="The http server containing the firebug tests")
                         
     parser.add_option("-v", "--version", dest="version",
