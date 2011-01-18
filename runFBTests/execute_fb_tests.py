@@ -107,7 +107,7 @@ def prepare_builds(argv, version, basedir, builds):
             try:
                 proc = subprocess.Popen("get-latest-tinderbox --product=mozilla-" + build, shell=True, stdout=subprocess.PIPE)
                 tinderbox_url = proc.communicate()[0]
-            except NotFoundException as e:
+            except Exception as e:
                 print "[Error] Couldn't find a suitable tinderbox build: " + str(e)
                 break
             
