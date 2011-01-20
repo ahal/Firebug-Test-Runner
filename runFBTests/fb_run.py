@@ -41,216 +41,166 @@ from optparse import OptionParser
 from ConfigParser import ConfigParser
 import os, sys
 import mozrunner
-import urllib2
 import fb_logs
-import datetime
+import fb_utils as utils
 import platform
-import pdb
 
-def cleanup():
-    """
-    Remove temporarily downloaded files
-    """
-    try:
-        "Perform cleanup and exit"
-        if os.path.exists("firebug.xpi"):
-            os.remove("firebug.xpi")
-        if os.path.exists("fbtest.xpi"):
-            os.remove("fbtest.xpi")
-        if os.path.exists("test-bot.config"):
-            os.remove("test-bot.config")
-    except Exception as e:
-        print "[Warn] Could not clean up temporary files: " + str(e)        
-        
-def retrieve_url(url, filename):
-    """
-    Save the file located at 'url' into 'filename'
-    """
-    try:
-        ret = urllib2.urlopen(url)
-    except:
-        print "[Error] Could not download the file at '" + str(url) + "'"
-        return -1
-    dir = os.path.dirname(filename)
-    if dir and not os.path.exists(dir):
-        os.makedirs(dir)
-    output = open(filename, 'wb')
-    output.write(ret.read())
-    output.close()
-    return 0
+class FBRunner:
+    def __init__(self, **kwargs): 
+        # Initialization  
+        self.binary = kwargs[binary]
+        self.profile = kwargs[profile]
+        self.serverpath = kwargs[serverpath]
+        self.version = kwargs[version]
+        self.couchuri = kwargs[couchURI]
+        self.databasename = kwargs[databasename]
+        self.testlist = kwargs[testlist]
+        self.platform = platform.system().lower()
 
-def parse_rdf(lines, tagname):
-    """
-    Parse a list of rdf formated text
-    and return the value of 'tagname'
-    """
-    for line in lines:
-        if line.find("<em:" + tagname + ">") != -1:
-            return line[line.find(">") + 1:line.rfind("<")]
-    return -1
-
-def get_changeset(buildpath):
-    """
-    Return the changeset of the build located at 'buildpath'
-    """
-    app_ini = ConfigParser()
-    appPath = os.path.join(buildpath, ("Contents/MacOS" if platform.system().lower() == "darwin" else ""))
-    app_ini.read(os.path.join(appPath, "application.ini"))
-    return app_ini.get("App", "SourceStamp")
-
-def create_log(profile, opt):
-    """
-    In the event that the FBTests fail to run and no log file is created,
-    create our own to send to the database.
-    """
-    try:
-        content = []
-        file = open(os.path.join(profile, "extensions/firebug@software.joehewitt.com/install.rdf"))
-        content.append("FIREBUG INFO | Firebug: " + parse_rdf(file.readlines(), "version") + "\n")
-        file = open(os.path.join(profile, "extensions/fbtest@mozilla.com/install.rdf"))
-        content.append("FIREBUG INFO | FBTest: " + parse_rdf(file.readlines(), "version") + "\n")
-        parser = ConfigParser()
-        parser.read(os.path.join(os.path.dirname(opt.binary), "application.ini"))
-        content.append("FIREBUG INFO | App Name: " + parser.get("App", "Name") + "\n")
-        content.append("FIREBUG INFO | App Version: " + parser.get("App", "Version") + "\n")
-        content.append("FIREBUG INFO | App Platform: " + parser.get("Gecko", "MaxVersion") + "\n")
-        content.append("FIREBUG INFO | App BuildID: " + parser.get("App", "BuildID") + "\n")
-        content.append("FIREBUG INFO | Export Date: " + datetime.datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S GMT") + "\n")
-        content.append("FIREBUG INFO | Test Suite: " + opt.testlist + "\n")
-        content.append("FIREBUG INFO | Total Tests: 0\n")
-        content.append("FIREBUG INFO | Fail | [START] Could not start FBTests\n")
-        file = open(os.path.join(profile, "firebug/firebug-test.log"), "w")        
-        file.writelines(content)
-        return file
-    except Exception as e:
-        print "[Warn] Failed to synthesize log file: " + str(e)
-    
-def get_extensions(serverpath, version):
-    """
-    Downloads the firebug and fbtest extensions
-    for the specified Firebug version
-    """
-    retrieve_url(serverpath + "releases/firebug/test-bot.config", "test-bot.config")
-    config = ConfigParser()
-    config.read("test-bot.config")
-    FIREBUG_XPI = config.get("Firebug" + version, "FIREBUG_XPI")
-    FBTEST_XPI = config.get("Firebug" + version, "FBTEST_XPI")
-    os.remove("test-bot.config")
-    FIREBUG_XPI.replace("http://getfirebug.com/", serverpath)
-    FBTEST_XPI.replace("http://getfirebug.com/", serverpath)
-    if retrieve_url(FIREBUG_XPI, "firebug.xpi") != 0 or retrieve_url(FBTEST_XPI, "fbtest.xpi") != 0:
-        return -1
-    return 0
-
-def disable_compatibilityCheck(profile):
-    """
-    Disables compatibility check which could
-    potentially prompt the user for action
-    """
-    try:
-        prefs = open(os.path.join(profile, "prefs.js"), "a")
-        prefs.write("user_pref(\"extensions.checkCompatibility.4.0b\", false);\n")
-        prefs.write("user_pref(\"extensions.checkCompatibility.4.0\", false);\n")
-        prefs.write("user_pref(\"extensions.checkCompatibility.3.6\", false);\n")
-        prefs.close();
-    except Exception as e:
-        print "[Warn] Could not disable compatibility check: " + str(e)
-    
-def run_test(opt):
-    if opt.profile != None:
-        # Ensure the profile actually exists
-        if not os.path.exists(os.path.join(opt.profile, "prefs.js")):
-            print "[Warn] Profile '" + opt.profile + "' doesn't exist.  Creating temporary profile"
-            opt.profile = None
-        else:
-            # Move any potential existing log files to log_old folder
-            for name in os.listdir(os.path.join(opt.profile, "firebug/fbtest/logs")):
-                os.rename(os.path.join(opt.profile, "firebug/fbtest/logs", name), os.path.join(opt.profile, "firebug/fbtest/logs_old", name))
-
-    # Concatenate serverpath based on Firebug version
-    opt.serverpath = ("" if opt.serverpath[0:7] == "http://" or opt.serverpath[0:8] == "https://" else "http://") + opt.serverpath
-    opt.serverpath += ("" if opt.serverpath[-1] == "/" else "/")
-    
-    # Ensure we have a testlist set
-    if opt.testlist == None:
-        opt.testlist = opt.serverpath + "/tests/content/testlists/firebug" + opt.version + ".html"
-
-    # If extensions were left over from last time, delete them
-    cleanup()
-
-    # Grab the extensions from server   
-    if get_extensions(opt.serverpath, opt.version) != 0:
-        cleanup()
-        print "[Error] Extensions could not be downloaded. Check that '" + opt.serverpath + "' exists and run 'fb_update.py' on the server"
-        return
-
-    # Create environment variables
-    dict = os.environ
-    dict["XPC_DEBUG_WARN"] = "warn"     # Suppresses certain alert warnings that may sometimes appear
-
-    # If firefox is running, kill it (needed for mozrunner)
-    mozrunner.kill_process_by_name("firefox" + (".exe" if platform.system().lower() == "windows" else "-bin"))
-
-    # Create profile for mozrunner and start the Firebug tests
-    print "[Info] Starting FBTests"
-    try:
-        profile = mozrunner.FirefoxProfile(profile=opt.profile, addons=["firebug.xpi", "fbtest.xpi"])
-                
-        # Disable the compatibility check on startup
-        disable_compatibilityCheck(profile.profile)
-        
-        runner = mozrunner.FirefoxRunner(binary=opt.binary, profile=profile, 
-                                         cmdargs=["-runFBTests", opt.testlist], env=dict)
-        runner.start()
-    except Exception as e:
-        cleanup()
-        print "[Error] Could not start Firefox: " + str(e)
-        return
-
-    # Find the log file
-    timeout, logfile = 0, 0
-    # Wait up to 5 minutes for the log file to be initialized
-    while not logfile and timeout < 300:
+    def cleanup(self):
+        """
+        Remove temporarily downloaded files
+        """
         try:
-            for name in os.listdir(os.path.join(profile.profile, "firebug/fbtest/logs")):
-                logfile = open(os.path.join(profile.profile, "firebug/fbtest/logs/", name))
-        except OSError:
-            timeout += 1
-            mozrunner.sleep(1)
-            
-    # If log file was not found, create our own log file
-    if not logfile:
-        print "[Error] Could not find the log file in profile '" + profile.profile + "'"
-        logfile = create_log(profile.profile, opt)
-    # If log file found, exit when fbtests finished (if no activity, wait up to 10 min)
-    else:
-        line, timeout = "", 0
-        while line.find("Test Suite Finished") == -1 and timeout < 600:
-            line = logfile.readline()
-            if line == "":
-                mozrunner.sleep(1)
-                timeout += 1
+            "Perform cleanup and exit"
+            if os.path.exists("firebug.xpi"):
+                os.remove("firebug.xpi")
+            if os.path.exists("fbtest.xpi"):
+                os.remove("fbtest.xpi")
+            if os.path.exists("test-bot.config"):
+                os.remove("test-bot.config")
+        except Exception as e:
+            print "[Warn] Could not clean up temporary files: " + str(e)        
+        
+    def get_extensions(self):
+        """
+        Downloads the firebug and fbtest extensions
+        for the specified Firebug version
+        """
+        utils.download(self.serverpath + "releases/firebug/test-bot.config", "test-bot.config")
+        config = ConfigParser()
+        config.read("test-bot.config")
+        FIREBUG_XPI = config.get("Firebug" + self.version, "FIREBUG_XPI")
+        FBTEST_XPI = config.get("Firebug" + self.version, "FBTEST_XPI")
+        os.remove("test-bot.config")
+        utils.download(FIREBUG_XPI, "firebug.xpi")
+        utils.download(FBTEST_XPI, "fbtest.xpi")
+
+    def disable_compatibilityCheck(self):
+        """
+        Disables compatibility check which could
+        potentially prompt the user for action
+        """
+        try:
+            prefs = open(os.path.join(self.profile, "prefs.js"), "a")
+            prefs.write("user_pref(\"extensions.checkCompatibility.4.0b\", false);\n")
+            prefs.write("user_pref(\"extensions.checkCompatibility.4.0\", false);\n")
+            prefs.write("user_pref(\"extensions.checkCompatibility.3.6\", false);\n")
+            prefs.close();
+        except Exception as e:
+            print "[Warn] Could not disable compatibility check: " + str(e)
+        
+    def run(self):
+        """
+        Code for running the tests
+        """
+        if self.profile:
+            # Ensure the profile actually exists
+            if not os.path.exists(os.path.join(self.profile, "prefs.js")):
+                print "[Warn] Profile '" + self.profile + "' doesn't exist.  Creating temporary profile"
+                self.profile = None
             else:
-                timeout = 0
+                # Move any potential existing log files to log_old folder
+                for name in os.listdir(os.path.join(self.profile, "firebug/fbtest/logs")):
+                    os.rename(os.path.join(self.profile, "firebug/fbtest/logs", name), os.path.join(self.profile, "firebug/fbtest/logs_old", name))
+
+        # Ensure serverpath has correct format
+        self.serverpath += ("" if self.serverpath[-1] == "/" else "/")
+        
+        # Ensure we have a testlist set
+        if not self.testlist:
+            self.testlist = self.serverpath + "tests/content/testlists/firebug" + self.version + ".html"
+
+        # If extensions were left over from last time, delete them
+        cleanup()
+
+        # Grab the extensions from server   
+        try:
+            get_extensions(self.serverpath, self.version)
+        except Exception as e:
+            cleanup()
+            print "[Error] Extensions could not be downloaded: " + str(e)
+            return
+
+        # Create environment variables
+        dict = os.environ
+        dict["XPC_DEBUG_WARN"] = "warn"     # Suppresses certain alert warnings that may sometimes appear
+
+        # If firefox is running, kill it (needed for mozrunner)
+        mozrunner.kill_process_by_name("firefox" + (".exe" if self.platform == "windows" else "-bin"))
+
+        # Create profile for mozrunner and start the Firebug tests
+        print "[Info] Starting FBTests"
+        try:
+            profile = mozrunner.FirefoxProfile(profile=self.profile, addons=["firebug.xpi", "fbtest.xpi"])
+            self.profile = profile.profile
+                    
+            # Disable the compatibility check on startup
+            disable_compatibilityCheck()
+            
+            runner = mozrunner.FirefoxRunner(binary=self.binary, profile=profile, 
+                                             cmdargs=["-runFBTests", self.testlist], env=dict)
+            runner.start()
+        except Exception as e:
+            cleanup()
+            print "[Error] Could not start Firefox: " + str(e)
+            return
+
+        # Find the log file
+        timeout, logfile = 0, 0
+        # Wait up to 5 minutes for the log file to be initialized
+        while not logfile and timeout < 300:
+            try:
+                for name in os.listdir(os.path.join(self.profile, "firebug/fbtest/logs")):
+                    logfile = open(os.path.join(self.profile, "firebug/fbtest/logs/", name))
+            except OSError:
+                timeout += 1
+                mozrunner.sleep(1)
                 
-    # Give last two lines of file a chance to write and send log file to fb_logs  
-    if logfile != -1:
+        # If log file was not found, create our own log file
+        if not logfile:
+            print "[Error] Could not find the log file in profile '" + self.profile + "'"
+            logfile = utils.create_log(self.profile, self.binary, self.testlist)
+        # If log file found, exit when fbtests finished (if no activity, wait up to 10 min)
+        else:
+            line, timeout = "", 0
+            while line.find("Test Suite Finished") == -1 and timeout < 600:
+                line = logfile.readline()
+                if line == "":
+                    mozrunner.sleep(1)
+                    timeout += 1
+                else:
+                    timeout = 0
+                    
+        # Give last two lines of file a chance to write and send log file to fb_logs  
         mozrunner.sleep(2)
         filename = logfile.name
         logfile.close()
-        print "[Info] Sending log file to couchdb at '" + opt.couchserveruri + "'"
-        if fb_logs.main(["--log", filename, "--database", opt.databasename, "--couch", opt.couchserveruri,
-                         "--changeset", get_changeset((opt.binary if platform.system().lower() == "darwin" else os.path.dirname(opt.binary)))]) != 0:
-            print "[Error] Log file not sent to couchdb at server: '" + opt.couchserveruri + "' and database: '" + opt.databasename + "'" 
-        
-    # Cleanup
-    mozrunner.kill_process_by_name("crashreporter" + (".exe" if platform.system().lower() == "windows" else ""))
-    mozrunner.kill_process_by_name("firefox" + (".exe" if platform.system().lower() == "windows" else "-bin"))
-    cleanup()
-    return 0
+        print "[Info] Sending log file to couchdb at '" + self.couchURI + "'"
+        try:
+            fb_logs.main(["--log", filename, "--database", self.databasename, "--couch", self.couchserveruri,
+                             "--changeset", get_changeset((self.binary if self.platform == "darwin" else os.path.dirname(self.binary)))])
+        except Exception as e:
+            print "[Error] Log file not sent to couchdb at server: '" + self.couchURI + "' and database: '" + self.databasename + "'" 
+            
+        # Cleanup
+        mozrunner.kill_process_by_name("crashreporter" + (".exe" if self.platform == "windows" else ""))
+        mozrunner.kill_process_by_name("firefox" + (".exe" if self.platform == "windows" else "-bin"))
+        cleanup()
 
-def main(argv): 
-    # Initialization
+
+# Called from the command line
+def cli(argv=sys.argv[1:]):
     parser = OptionParser("usage: %prog [options]")
     parser.add_option("-b", "--binary", dest="binary",
                       help="Firefox binary path")
@@ -266,7 +216,7 @@ def main(argv):
                       default="1.6",
                       help="The firebug version to run")
                         
-    parser.add_option("-c", "--couch", dest="couchserveruri",
+    parser.add_option("-c", "--couch", dest="couchserverURI",
                       default="http://localhost:5984",
                       help="URI to couchdb server for log information")
                         
@@ -276,12 +226,11 @@ def main(argv):
                         
     parser.add_option("-t", "--testlist", dest="testlist",
                       help="Specify the name of the testlist to use, should usually use the default")
-    parser.add_option("-i", dest="waitTime")
     (opt, remainder) = parser.parse_args(argv)
     
-    return run_test(opt)
-
-
+    runner = FBRunner(binary=opt.binary, profile=opt.profile, serverpath=opt.serverpath, version=opt.version, 
+                                        couchURI=opt.couchURI, databasename=opt.databasename, testlist=opt.testlist)
+    runner.run()
     
 if __name__ == '__main__':
-    main(sys.argv[1:])
+    cli()

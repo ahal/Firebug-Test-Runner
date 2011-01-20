@@ -90,61 +90,57 @@ def main(argv):
     resultCount = 0
     lastResultDoc = None
     
-    try:
-        logfilehandle = open(options.logfilename, 'r')
-        for logline in logfilehandle:
-            logline = logline.rstrip('\n')
+    logfilehandle = open(options.logfilename, 'r')
+    for logline in logfilehandle:
+        logline = logline.rstrip('\n')
 
-            match = reFirebugProgress.match(logline)
-            if match:
-                testprogressinfo += match.group(2) + "\n"
-            else:
-                if checkForMeta:
-                    match = reFirebugMeta.match(logline)
-                    if match:
-                        #print 'test: meta: %s=%s' % (match.group(1), match.group(2))
-                        testheaderdoc[match.group(1)] = match.group(2)
-                        testheaderdoc["App Changeset"] = options.changeset
-                        testheaderdoc["CPU Architecture"] = platform["cpu"]
-                        testheaderdoc["OS Detailed Name"] = platform["version"]
-                        if not "OS Name" in testheaderdoc:
-                            testheaderdoc["OS Name"] = platform["name"]
-
-                match = reFirebugStart.match(logline)
+        match = reFirebugProgress.match(logline)
+        if match:
+            testprogressinfo += match.group(2) + "\n"
+        else:
+            if checkForMeta:
+                match = reFirebugMeta.match(logline)
                 if match:
-                    if checkForMeta:
-                        headerinfo = couchdb.create(testheaderdoc)
-                    checkForMeta = False
-                    #print 'test: testfile=%s, testdescription=%s' % (match.group(1), match.group(2))
-                    testresultdoc = dict(testheaderdoc)
-                    testresultdoc["headerid"] = headerinfo["id"]
-                    testresultdoc["type"] = "result"
-                    testresultdoc["file"] = match.group(1)
-                    testresultdoc["description"] = match.group(2)
-                else:
-                    match = reFirebugResult.match(logline)
-                    if match:
-                        #print 'test: result=%s' % match.group(1)
-                        testresultdoc["result"] = match.group(1)
-                        if testprogressinfo != "":
-                            testresultdoc["progress"] = testprogressinfo
-                            testprogressinfo = ""
-                        resultCount += 1
-                        lastResultDoc = dict(testresultdoc)
-                        couchdb.create(testresultdoc)
-                        if "progress" in testresultdoc:
-                            del(testresultdoc["progress"])
+                    #print 'test: meta: %s=%s' % (match.group(1), match.group(2))
+                    testheaderdoc[match.group(1)] = match.group(2)
+                    testheaderdoc["App Changeset"] = options.changeset
+                    testheaderdoc["CPU Architecture"] = platform["cpu"]
+                    testheaderdoc["OS Detailed Name"] = platform["version"]
+                    if not "OS Name" in testheaderdoc:
+                        testheaderdoc["OS Name"] = platform["name"]
 
-        if resultCount < int(lastResultDoc["Total Tests"]):
-            print "[Info] Possible crash detected"
-            lastResultDoc["type"] = "crash"
-            lastResultDoc["tests run"] = str(resultCount)
-            couchdb.create(lastResultDoc)
-            
-        logfilehandle.close()
-        return 0
-    except Exception as e:
-        return e
+            match = reFirebugStart.match(logline)
+            if match:
+                if checkForMeta:
+                    headerinfo = couchdb.create(testheaderdoc)
+                checkForMeta = False
+                #print 'test: testfile=%s, testdescription=%s' % (match.group(1), match.group(2))
+                testresultdoc = dict(testheaderdoc)
+                testresultdoc["headerid"] = headerinfo["id"]
+                testresultdoc["type"] = "result"
+                testresultdoc["file"] = match.group(1)
+                testresultdoc["description"] = match.group(2)
+            else:
+                match = reFirebugResult.match(logline)
+                if match:
+                    #print 'test: result=%s' % match.group(1)
+                    testresultdoc["result"] = match.group(1)
+                    if testprogressinfo != "":
+                        testresultdoc["progress"] = testprogressinfo
+                        testprogressinfo = ""
+                    resultCount += 1
+                    lastResultDoc = dict(testresultdoc)
+                    couchdb.create(testresultdoc)
+                    if "progress" in testresultdoc:
+                        del(testresultdoc["progress"])
+
+    if resultCount < int(lastResultDoc["Total Tests"]):
+        print "[Info] Possible crash detected"
+        lastResultDoc["type"] = "crash"
+        lastResultDoc["tests run"] = str(resultCount)
+        couchdb.create(lastResultDoc)
+        
+    logfilehandle.close()
 
 if __name__ == '__main__':
     main(sys.argv[1:])
