@@ -48,13 +48,13 @@ import platform
 class FBRunner:
     def __init__(self, **kwargs): 
         # Initialization  
-        self.binary = kwargs[binary]
-        self.profile = kwargs[profile]
-        self.serverpath = kwargs[serverpath]
-        self.version = kwargs[version]
-        self.couchuri = kwargs[couchURI]
-        self.databasename = kwargs[databasename]
-        self.testlist = kwargs[testlist]
+        self.binary = kwargs["binary"]
+        self.profile = kwargs["profile"]
+        self.serverpath = kwargs["serverpath"]
+        self.version = kwargs["version"]
+        self.couchURI = kwargs["couchURI"]
+        self.databasename = kwargs["databasename"]
+        self.testlist = kwargs["testlist"]
         self.platform = platform.system().lower()
 
     def cleanup(self):
@@ -122,13 +122,13 @@ class FBRunner:
             self.testlist = self.serverpath + "tests/content/testlists/firebug" + self.version + ".html"
 
         # If extensions were left over from last time, delete them
-        cleanup()
+        self.cleanup()
 
         # Grab the extensions from server   
         try:
-            get_extensions(self.serverpath, self.version)
+            self.get_extensions()
         except Exception as e:
-            cleanup()
+            self.cleanup()
             print "[Error] Extensions could not be downloaded: " + str(e)
             return
 
@@ -146,13 +146,13 @@ class FBRunner:
             self.profile = profile.profile
                     
             # Disable the compatibility check on startup
-            disable_compatibilityCheck()
+            self.disable_compatibilityCheck()
             
             runner = mozrunner.FirefoxRunner(binary=self.binary, profile=profile, 
                                              cmdargs=["-runFBTests", self.testlist], env=dict)
             runner.start()
         except Exception as e:
-            cleanup()
+            self.cleanup()
             print "[Error] Could not start Firefox: " + str(e)
             return
 
@@ -188,7 +188,7 @@ class FBRunner:
         logfile.close()
         print "[Info] Sending log file to couchdb at '" + self.couchURI + "'"
         try:
-            fb_logs.main(["--log", filename, "--database", self.databasename, "--couch", self.couchserveruri,
+            fb_logs.main(["--log", filename, "--database", self.databasename, "--couch", self.couchURI,
                              "--changeset", get_changeset((self.binary if self.platform == "darwin" else os.path.dirname(self.binary)))])
         except Exception as e:
             print "[Error] Log file not sent to couchdb at server: '" + self.couchURI + "' and database: '" + self.databasename + "'" 
@@ -196,7 +196,7 @@ class FBRunner:
         # Cleanup
         mozrunner.kill_process_by_name("crashreporter" + (".exe" if self.platform == "windows" else ""))
         mozrunner.kill_process_by_name("firefox" + (".exe" if self.platform == "windows" else "-bin"))
-        cleanup()
+        self.cleanup()
 
 
 # Called from the command line
@@ -216,7 +216,7 @@ def cli(argv=sys.argv[1:]):
                       default="1.6",
                       help="The firebug version to run")
                         
-    parser.add_option("-c", "--couch", dest="couchserverURI",
+    parser.add_option("-c", "--couch", dest="couchURI",
                       default="http://localhost:5984",
                       help="URI to couchdb server for log information")
                         
