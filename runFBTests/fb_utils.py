@@ -36,12 +36,13 @@
 # ***** END LICENSE BLOCK *****
 from ConfigParser import ConfigParser
 import datetime
+import os
 import urllib2
 import platform
 
 # This is a quick hack that will rarely be used
 # It is here so we don't have to depend on an entire RDF parsing module
-def parse_rdf(self, lines, tagname):
+def parse_rdf(lines, tagname):
     """
     Parse a list of rdf formated text
     and return the value of 'tagname'
@@ -86,7 +87,7 @@ def download(url, savepath):
     savedir = os.path.dirname(savepath)
     if savedir and not os.path.exists(savedir):
         os.makedirs(savedir)
-    outfile = open(filename, 'wb')
+    outfile = open(savepath, 'wb')
     outfile.write(ret.read())
     outfile.close()
     
