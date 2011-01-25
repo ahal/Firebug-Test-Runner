@@ -154,7 +154,7 @@ class FBWrapper:
                 continue
             
             # If the newest tinderbox changeset is different from the previously run changeset
-            if self.build_needed(build, buildPath):
+            if self.build_needed(version, build, buildPath):
                 if self.platform == "darwin":
                     self.binary = buildPath
                 else:
