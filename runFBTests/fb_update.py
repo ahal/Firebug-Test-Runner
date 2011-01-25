@@ -112,6 +112,7 @@ def update(opt):
     
     with open(os.path.join(opt.repo, configDir), 'wb') as configfile:
         test_bot.write(configfile)
+        configfile.close()
     
     # Change webserver to point to the local server's ip
     localizeConfig(os.path.join(opt.repo, configDir))    
