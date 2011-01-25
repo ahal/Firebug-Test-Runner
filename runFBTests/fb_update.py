@@ -50,15 +50,16 @@ import urllib2
 
 def localizeConfig(configFile):
     # Get server's ip address
-    proc = subprocess.Popen("ifconfig | grep \"inet addr:\" | cut -d: -f2 | awk \"{ print $1}\" | grep -v \"127.0.0.1\"", shell=True, stdout=subprocess.PIPE)
+    proc = subprocess.Popen("ifconfig | grep 'inet addr:' | cut -d: -f2 | grep -v '127.0.0.1' | awk '{ print $1}'", shell=True, stdout=subprocess.PIPE)
     ip = proc.communicate()[0]
+    
+    print ip
     
     for line in fileinput.input(configFile, inplace=1):
         if line.find("FIREBUG_XPI") != -1 or line.find("FBTEST_XPI") != -1 or line.find("TEST_LIST") != -1:
             index = line.find("=")
-            print line[:index] + "http://" + ip + "/" + getRelativeURL(line[index + 1:])
-        else:
-            print line.rstrip() 
+            line = line[:index] + "http://" + ip + "/" + getRelativeURL(line[index + 1:])
+        print line.rstrip() 
     
 
 def getRelativeURL(url):
