@@ -83,7 +83,7 @@ class FBWrapper:
                 if os.path.isdir(os.path.join(self.tempdir, filename)) and filename[0:3] == "tmp":            
                     shutil.rmtree(os.path.join(self.tempdir, filename))
         except Exception as e:
-            print "[Warn] Could not delete temporary files in '" + basedir + "': " + str(ret)
+            print "[Warn] Could not delete temporary files in '" + self.tempdir + "': " + str(e)
 
     def build_needed(self, build, buildpath):
         """
