@@ -51,9 +51,7 @@ import urllib2
 def localizeConfig(configFile):
     # Get server's ip address
     proc = subprocess.Popen("ifconfig | grep 'inet addr:' | cut -d: -f2 | grep -v '127.0.0.1' | awk '{ print $1}'", shell=True, stdout=subprocess.PIPE)
-    ip = proc.communicate()[0]
-    
-    print ip
+    ip = proc.communicate()[0].rstrip()
     
     for line in fileinput.input(configFile, inplace=1):
         if line.find("FIREBUG_XPI") != -1 or line.find("FBTEST_XPI") != -1 or line.find("TEST_LIST") != -1:
