@@ -112,12 +112,8 @@ class FBWrapper:
         """
         Downloads the builds and starts the tests
         """
-        # Lookup table mapping Firefox versions to Gecko versions (as specified in Firebug's test-bot.config)
-        lookup = { '3.5' : '1.9.1', '3.6' : '1.9.2', '3.7' : 'central', '4.0' : 'central' }                 # TODO Use Gecko versions in test-bot.config instead of Firefox versions so this isn't necessary
-
         # For each version of Firefox, see if there is a new changeset and run the tests
         for build in builds:
-            build = lookup[build]
             print "[Info] Running Firebug" + version + " tests against Mozilla " + build
 
             # Scrape for the latest tinderbox build and extract it to the basedir
@@ -191,7 +187,7 @@ class FBWrapper:
                             if not self.testlist:
                                 self.testlist = config.get("Firebug" + version, "TEST_LIST")
                             if not self.binary:
-                                builds = config.get("Firebug" + version, "FIREFOX_VERSION").split(",")
+                                builds = config.get("Firebug" + version, "GECKO_VERSION").split(",")
                         except Exception as e:
                             print "[Error] Malformed config file: " + str(e)
                             continue
