@@ -74,7 +74,7 @@ def getRelativeURL(url):
 def update(opt):
     # Grab the test_bot.config file
     configDir = "releases/firebug/test-bot.config"
-    retrieve_url("http://getfirebug.com/" + configDir, os.path.join(opt.repo, configDir))
+    utils.download("http://getfirebug.com/" + configDir, os.path.join(opt.repo, configDir))
     
     # Parse the config file
     test_bot = ConfigParser()
