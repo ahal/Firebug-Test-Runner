@@ -40,11 +40,13 @@
 # the fbtests and testlists and store them on the local webserver
 from ConfigParser import ConfigParser
 from time import sleep
+import fileinput
 import os, sys
+import subprocess
 import shutil
 import optparse
 import urllib2
-    
+
 def retrieve_url(url, filename):
     """
     Save the file located at 'url' into 'filename'
@@ -60,6 +62,29 @@ def retrieve_url(url, filename):
     output.write(ret.read())
     output.close()
     return 0
+
+def localizeConfig(configFile):
+    # Get server's ip address
+    proc = subprocess.Popen("ifconfig  | grep 'inet addr:'| grep -v '127.0.0.1' | cut -d: -f2 | awk '{ print $1}'", stdout=subprocess.PIPE)
+    ip = proc.communicate()[0]
+    
+    for line in fileinput.input(configFile, inplace=1):
+        if line.find("FIREBUG_XPI") != -1 or line.find("FBTEST_XPI") != -1 or line.find("TEST_LIST") != -1:
+            index = line.find("=")
+            print line[:index] + "http://" + ip + "/" + getRelativePath(line[index + 1:])
+        else:
+            print line.rstrip() 
+    
+
+def getRelativePath(url):
+    if (url.find("http://") != -1):           
+        index = url[7:].find("/") + 7
+    else if (FIREBUG_XPI.find("https://") != -1):
+        index = url[8:].find("/") + 8
+    else:
+        index = url.find("/")
+    return url[index+1:]
+
     
 def update(opt):
     # Grab the test_bot.config file
@@ -85,23 +110,20 @@ def update(opt):
         
         # Download the extensions
         print FIREBUG_XPI
-        if (FIREBUG_XPI.find("http://") != -1):           
-            index = FIREBUG_XPI[7:].find("/") + 7
-        else:
-            index = FIREBUG_XPI.find("/")
-        savePath = os.path.join(opt.repo, FIREBUG_XPI[index+1:])
+        relPath = getRelativePath(FIREBUG_XPI)
+        savePath = os.path.join(opt.repo, relPath)
         retrieve_url(FIREBUG_XPI, savePath)
         
         print FBTEST_XPI
-        if (FBTEST_XPI.find("http://") != -1):
-            index = FBTEST_XPI[7:].find("/") + 7
-        else:
-            index = FBTEST_XPI.find("/")
-        savePath = os.path.join(opt.repo, FBTEST_XPI[index+1:])
+        relPath = getRelativePath(FBTEST_XPI)
+        savePath = os.path.join(opt.repo, relPath)
         retrieve_url(FBTEST_XPI, savePath)
-        
-        # Copy the files to the webserver
-        os.system("cp -r " + os.path.join(opt.repo, "*") + " " + opt.serverpath)
+    
+    test_bot.close()
+    localizeConfig(os.path.join(opt.repo, "releases/firebug/test-bot.config"), opt.serverpath)    
+
+    # Copy the files to the webserver
+    os.system("cp -r " + os.path.join(opt.repo, "*") + " " + opt.serverpath)
 
 def main(argv):
     # Parse command line
