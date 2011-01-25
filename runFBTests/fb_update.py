@@ -71,12 +71,12 @@ def localizeConfig(configFile):
     for line in fileinput.input(configFile, inplace=1):
         if line.find("FIREBUG_XPI") != -1 or line.find("FBTEST_XPI") != -1 or line.find("TEST_LIST") != -1:
             index = line.find("=")
-            print line[:index] + "http://" + ip + "/" + getRelativePath(line[index + 1:])
+            print line[:index] + "http://" + ip + "/" + getRelativeURL(line[index + 1:])
         else:
             print line.rstrip() 
     
 
-def getRelativePath(url):
+def getRelativeURL(url):
     if (url.find("http://") != -1):           
         index = url[7:].find("/") + 7
     elif (FIREBUG_XPI.find("https://") != -1):
@@ -104,22 +104,29 @@ def update(opt):
         
         # Update or create the svn test repository
         if not os.path.isdir(os.path.join(opt.repo, ".svn")):
-            os.system("svn co http://fbug.googlecode.com/svn/tests/ " + os.path.join(opt.repo, "tests") + " -r " + SVN_REVISION)
+            os.system("svn co http://fbug.googlecode.com/svn/tests/ " + os.path.join(opt.repo, SVN_REVISION, "tests") + " -r " + SVN_REVISION)
         else:
             os.system(os.path.join(opt.repo, "svn") + " update -r " + SVN_REVISION)
         
         # Download the extensions
         print FIREBUG_XPI
-        relPath = getRelativePath(FIREBUG_XPI)
+        relPath = getRelativeURL(FIREBUG_XPI)
         savePath = os.path.join(opt.repo, relPath)
         retrieve_url(FIREBUG_XPI, savePath)
         
         print FBTEST_XPI
-        relPath = getRelativePath(FBTEST_XPI)
+        relPath = getRelativeURL(FBTEST_XPI)
         savePath = os.path.join(opt.repo, relPath)
         retrieve_url(FBTEST_XPI, savePath)
+        
+        # Update testlist for specific revision
+        testlist = test_bot.get(section, "TEST_LIST")
+        relPath = getRelativeURL(testlist)
+        testlist = testlist.replace(relPath, SVN_REVISION + "/" + relPath)
+        test_bot.set(section, "TEST_LIST", testlist)
     
     test_bot.close()
+    # Change webserver to point to the local server's ip
     localizeConfig(os.path.join(opt.repo, "releases/firebug/test-bot.config"), opt.serverpath)    
 
     # Copy the files to the webserver

@@ -191,7 +191,7 @@ class FBRunner:
             fb_logs.main(["--log", filename, "--database", self.databasename, "--couch", self.couchURI,
                              "--changeset", get_changeset((self.binary if self.platform == "darwin" else os.path.dirname(self.binary)))])
         except Exception as e:
-            print "[Error] Log file not sent to couchdb at server: '" + self.couchURI + "' and database: '" + self.databasename + "'" 
+            print "[Error] Log file not sent to couchdb at server: '" + self.couchURI + "' and database: '" + self.databasename + "': " + str(e)
             
         # Cleanup
         mozrunner.kill_process_by_name("crashreporter" + (".exe" if self.platform == "windows" else ""))
