@@ -161,6 +161,7 @@ class FBWrapper:
                     self.binary = os.path.join(buildPath, "firefox" + (".exe" if self.platform == "windows" else ""))
                 self.start_tests(version)
                 self.binary = None
+                self.testlist = None
             else:
                 print "[Info] Tests already run with this changeset"
                     
@@ -176,7 +177,6 @@ class FBWrapper:
         while True:
             try:
                 # Download test-bot.config to see which versions of Firefox to run the FBTests against
-                print self.serverpath + "releases/firebug/test-bot.config"
                 utils.download(self.serverpath + "releases/firebug/test-bot.config", "test-bot.config")
                 config = ConfigParser()
                 config.read("test-bot.config")
@@ -186,7 +186,6 @@ class FBWrapper:
                     if not self.version or version == self.version:
                         try:
                             if not self.testlist:
-                                print "testlist"
                                 self.testlist = config.get("Firebug" + version, "TEST_LIST")
                             if not self.binary:
                                 builds = config.get("Firebug" + version, "GECKO_VERSION").split(",")

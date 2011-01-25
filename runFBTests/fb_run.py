@@ -122,8 +122,6 @@ class FBRunner:
         if not self.testlist:
             self.testlist = self.serverpath + "tests/content/testlists/firebug" + self.version + ".html"
 
-        print self.testlist
-
         # If extensions were left over from last time, delete them
         self.cleanup()
 
