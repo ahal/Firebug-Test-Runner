@@ -58,7 +58,7 @@ def localizeConfig(configFile):
     for line in fileinput.input(configFile, inplace=1):
         if line.find("FIREBUG_XPI") != -1 or line.find("FBTEST_XPI") != -1 or line.find("TEST_LIST") != -1:
             index = line.find("=")
-            line = line[:index] + "http://" + ip + "/" + getRelativeURL(line[index + 1:])
+            line = line[:index + 1] + "http://" + ip + "/" + getRelativeURL(line[index + 1:])
         print line.rstrip() 
     
 
