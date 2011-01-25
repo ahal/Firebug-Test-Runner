@@ -106,11 +106,13 @@ def update(opt):
         # Update testlist for specific revision
         testlist = test_bot.get(section, "TEST_LIST")
         relPath = getRelativeURL(testlist)
+        print relPath
         testlist = testlist.replace(relPath, SVN_REVISION + "/" + relPath)
+        print testlist
         test_bot.set(section, "TEST_LIST", testlist)
     
     # Change webserver to point to the local server's ip
-    localizeConfig(os.path.join(opt.repo, "releases/firebug/test-bot.config"))    
+    localizeConfig(os.path.join(opt.repo, configDir))    
 
     # Copy the files to the webserver
     os.system("cp -r " + os.path.join(opt.repo, "*") + " " + opt.serverpath)
