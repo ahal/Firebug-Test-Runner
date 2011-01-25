@@ -106,11 +106,10 @@ def update(opt):
         # Update testlist for specific revision
         testlist = test_bot.get(section, "TEST_LIST")
         relPath = getRelativeURL(testlist)
-        print relPath
         testlist = testlist.replace(relPath, SVN_REVISION + "/" + relPath)
         print testlist
         test_bot.set(section, "TEST_LIST", testlist)
-        print test_bot.get(section, "TEST_LIST")
+        test_bot.write(os.path.join(opt.repo, configDir))
     
     # Change webserver to point to the local server's ip
     localizeConfig(os.path.join(opt.repo, configDir))    
