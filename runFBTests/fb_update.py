@@ -79,7 +79,7 @@ def localizeConfig(configFile):
 def getRelativePath(url):
     if (url.find("http://") != -1):           
         index = url[7:].find("/") + 7
-    else if (FIREBUG_XPI.find("https://") != -1):
+    elif (FIREBUG_XPI.find("https://") != -1):
         index = url[8:].find("/") + 8
     else:
         index = url.find("/")

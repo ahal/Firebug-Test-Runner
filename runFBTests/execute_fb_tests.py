@@ -190,7 +190,7 @@ class FBWrapper:
                         if not self.testlist:
                             try:
                                 self.testlist = config.get("Firebug" + version, "TEST_LIST")
-                            except ConfigParser.NoSectionError as e:
+                            except Exception as e:
                                 print "[Error] Malformed config file: " + str(e)
                                 continue
                         if not self.binary:
