@@ -48,18 +48,6 @@ import shutil
 import optparse
 import urllib2
 
-def localizeConfig(configFile):
-    # Get server's ip address
-    proc = subprocess.Popen("ifconfig | grep 'inet addr:' | cut -d: -f2 | grep -v '127.0.0.1' | awk '{ print $1}'", shell=True, stdout=subprocess.PIPE)
-    ip = proc.communicate()[0].rstrip()
-    
-    for line in fileinput.input(configFile, inplace=1):
-        if line.find("FIREBUG_XPI") != -1 or line.find("FBTEST_XPI") != -1 or line.find("TEST_LIST") != -1:
-            index = line.find("=")
-            line = line[:index + 1] + "http://" + ip + "/" + getRelativeURL(line[index + 1:])
-        print line.rstrip() 
-    
-
 def getRelativeURL(url):
     if (url.find("http://") != -1):           
         index = url[7:].find("/") + 7
@@ -71,6 +59,10 @@ def getRelativeURL(url):
 
     
 def update(opt):
+    # Get server's ip address
+    proc = subprocess.Popen("ifconfig | grep 'inet addr:' | cut -d: -f2 | grep -v '127.0.0.1' | awk '{ print $1}'", shell=True, stdout=subprocess.PIPE)
+    ip = proc.communicate()[0].rstrip()
+    
     # Grab the test_bot.config file
     configDir = "releases/firebug/test-bot.config"
     utils.download("http://getfirebug.com/" + configDir, os.path.join(opt.repo, configDir))
@@ -103,19 +95,23 @@ def update(opt):
         savePath = os.path.join(opt.repo, relPath)
         utils.download(FBTEST_XPI, savePath)
         
-        # Update testlist for specific revision
+        # Localize extensions for the server
+        relPath = getRelativeURL(FIREBUG_XPI)
+        FIREBUG_XPI = "http://" + ip + "/" + relPath
+        test_bot.set(section, "FIREBUG_XPI", FIREBUG_XPI)
+        
+        relPath = getRelativeURL(FBTEST_XPI)
+        FBTEST_XPI = "http://" + ip + "/" + relPath
+        test_bot.set(section, "FBTEST_XPI", FBTEST_XPI)
+        
+        # Localize testlist for the server
         testlist = test_bot.get(section, "TEST_LIST")
         relPath = getRelativeURL(testlist)
-        testlist = testlist.replace(relPath, SVN_REVISION + "/" + relPath)
-        print testlist
+        testlist = "http://" + ip + "/" + SVN_REVISION + "/" + relPath
         test_bot.set(section, "TEST_LIST", testlist)
     
     with open(os.path.join(opt.repo, configDir), 'wb') as configfile:
         test_bot.write(configfile)
-        configfile.close()
-    
-    # Change webserver to point to the local server's ip
-    localizeConfig(os.path.join(opt.repo, configDir))    
 
     # Copy the files to the webserver
     os.system("cp -r " + os.path.join(opt.repo, "*") + " " + opt.serverpath)
