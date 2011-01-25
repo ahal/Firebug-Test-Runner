@@ -111,7 +111,7 @@ def update(opt):
         test_bot.set(section, "TEST_LIST", testlist)
     
     with open(os.path.join(opt.repo, configDir), 'wb') as configfile:
-        test_bot.write(configFile)
+        test_bot.write(configfile)
     
     # Change webserver to point to the local server's ip
     localizeConfig(os.path.join(opt.repo, configDir))    
