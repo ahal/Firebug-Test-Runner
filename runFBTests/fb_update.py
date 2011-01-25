@@ -110,6 +110,7 @@ def update(opt):
         testlist = testlist.replace(relPath, SVN_REVISION + "/" + relPath)
         print testlist
         test_bot.set(section, "TEST_LIST", testlist)
+        print test_bot.get(section, "TEST_LIST")
     
     # Change webserver to point to the local server's ip
     localizeConfig(os.path.join(opt.repo, configDir))    
