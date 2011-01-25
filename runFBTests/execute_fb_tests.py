@@ -85,17 +85,17 @@ class FBWrapper:
         except Exception as e:
             print "[Warn] Could not delete temporary files in '" + self.tempdir + "': " + str(e)
 
-    def build_needed(self, build, buildpath):
+    def build_needed(self, version, build, buildpath):
         """
         Return True if the tests have never been run against the current changeset of 'build'
         Return False otherwise
         """
         # Find new changeset
         new_changeset = utils.get_changeset(buildpath)
-        if not build in self.changeset:
-            self.changeset[build] = -1
-        if self.changeset[build] != new_changeset:
-            self.changeset[build] = new_changeset
+        if not (version, build) in self.changeset:
+            self.changeset[(version, build)] = -1
+        if self.changeset[(version, build)] != new_changeset:
+            self.changeset[(version, build)] = new_changeset
             return True
         return False
         
@@ -176,6 +176,7 @@ class FBWrapper:
         while True:
             try:
                 # Download test-bot.config to see which versions of Firefox to run the FBTests against
+                print self.serverpath + "releases/firebug/test-bot.config"
                 utils.download(self.serverpath + "releases/firebug/test-bot.config", "test-bot.config")
                 config = ConfigParser()
                 config.read("test-bot.config")
@@ -185,6 +186,7 @@ class FBWrapper:
                     if not self.version or version == self.version:
                         try:
                             if not self.testlist:
+                                print "testlist"
                                 self.testlist = config.get("Firebug" + version, "TEST_LIST")
                             if not self.binary:
                                 builds = config.get("Firebug" + version, "GECKO_VERSION").split(",")
@@ -193,7 +195,7 @@ class FBWrapper:
                             continue
             		                    
                         print "[Info] Starting builds and FBTests for Firebug" + version
-                		
+                        print self.testlist
                         # Run the build(s)
                         if not self.binary:
                             ret = self.prepare_builds(version, builds)
