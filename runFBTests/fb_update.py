@@ -50,7 +50,7 @@ import urllib2
 
 def localizeConfig(configFile):
     # Get server's ip address
-    proc = subprocess.Popen("ifconfig | grep \"inet addr:\" | cut -d: -f2 | awk \"{ print $1}\" | grep -v \"127.0.0.1\"", stdout=subprocess.PIPE)
+    proc = subprocess.Popen("ifconfig | grep \"inet addr:\" | cut -d: -f2 | awk \"{ print $1}\" | grep -v \"127.0.0.1\"", shell=True, stdout=subprocess.PIPE)
     ip = proc.communicate()[0]
     
     for line in fileinput.input(configFile, inplace=1):
