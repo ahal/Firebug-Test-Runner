@@ -188,7 +188,11 @@ class FBWrapper:
                     version = section[-3:]
                     if not self.version or version == self.version:
                         if not self.testlist:
-                            self.testlist = config.get("Firebug" + version, "TEST_LIST")
+                            try:
+                                self.testlist = config.get("Firebug" + version, "TEST_LIST")
+                            except ConfigParser.NoSectionError as e:
+                                print "[Error] Malformed config file: " + str(e)
+                                continue
                         if not self.binary:
                             builds = config.get("Firebug" + version, "FIREFOX_VERSION").split(",")
             		                    
