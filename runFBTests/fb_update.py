@@ -40,6 +40,7 @@
 # the fbtests and testlists and store them on the local webserver
 from ConfigParser import ConfigParser
 from time import sleep
+import fb_utils as utils
 import fileinput
 import os, sys
 import subprocess
@@ -47,36 +48,7 @@ import shutil
 import optparse
 import urllib2
 
-def retrieve_url(url, filename):
-    """
-    Save the file located at 'url' into 'filename'
-    """
-    try:
-        ret = urllib2.urlopen(url)
-    except:
-        return -1
-    dir = os.path.dirname(filename)
-    if dir and not os.path.exists(dir):
-        os.makedirs(dir)
-    output = open(filename, 'wb')
-    output.write(ret.read())
-    output.close()
-    return 0
-
-def localizeConfig(configFile):
-    # Get server's ip address
-    proc = subprocess.Popen("ifconfig  | grep 'inet addr:'| grep -v '127.0.0.1' | cut -d: -f2 | awk '{ print $1}'", stdout=subprocess.PIPE)
-    ip = proc.communicate()[0]
-    
-    for line in fileinput.input(configFile, inplace=1):
-        if line.find("FIREBUG_XPI") != -1 or line.find("FBTEST_XPI") != -1 or line.find("TEST_LIST") != -1:
-            index = line.find("=")
-            print line[:index] + "http://" + ip + "/" + getRelativePath(line[index + 1:])
-        else:
-            print line.rstrip() 
-    
-
-def getRelativePath(url):
+def getRelativeURL(url):
     if (url.find("http://") != -1):           
         index = url[7:].find("/") + 7
     elif (FIREBUG_XPI.find("https://") != -1):
@@ -87,9 +59,13 @@ def getRelativePath(url):
 
     
 def update(opt):
+    # Get server's ip address
+    proc = subprocess.Popen("ifconfig | grep 'inet addr:' | cut -d: -f2 | grep -v '127.0.0.1' | awk '{ print $1}'", shell=True, stdout=subprocess.PIPE)
+    ip = proc.communicate()[0].rstrip()
+    
     # Grab the test_bot.config file
     configDir = "releases/firebug/test-bot.config"
-    retrieve_url("http://getfirebug.com/" + configDir, os.path.join(opt.repo, configDir))
+    utils.download("http://getfirebug.com/" + configDir, os.path.join(opt.repo, configDir))
     
     # Parse the config file
     test_bot = ConfigParser()
@@ -104,23 +80,38 @@ def update(opt):
         
         # Update or create the svn test repository
         if not os.path.isdir(os.path.join(opt.repo, ".svn")):
-            os.system("svn co http://fbug.googlecode.com/svn/tests/ " + os.path.join(opt.repo, "tests") + " -r " + SVN_REVISION)
+            os.system("svn co http://fbug.googlecode.com/svn/tests/ " + os.path.join(opt.repo, SVN_REVISION, "tests") + " -r " + SVN_REVISION)
         else:
             os.system(os.path.join(opt.repo, "svn") + " update -r " + SVN_REVISION)
         
         # Download the extensions
         print FIREBUG_XPI
-        relPath = getRelativePath(FIREBUG_XPI)
+        relPath = getRelativeURL(FIREBUG_XPI)
         savePath = os.path.join(opt.repo, relPath)
-        retrieve_url(FIREBUG_XPI, savePath)
+        utils.download(FIREBUG_XPI, savePath)
         
         print FBTEST_XPI
-        relPath = getRelativePath(FBTEST_XPI)
+        relPath = getRelativeURL(FBTEST_XPI)
         savePath = os.path.join(opt.repo, relPath)
-        retrieve_url(FBTEST_XPI, savePath)
+        utils.download(FBTEST_XPI, savePath)
+        
+        # Localize extensions for the server
+        relPath = getRelativeURL(FIREBUG_XPI)
+        FIREBUG_XPI = "http://" + ip + "/" + relPath
+        test_bot.set(section, "FIREBUG_XPI", FIREBUG_XPI)
+        
+        relPath = getRelativeURL(FBTEST_XPI)
+        FBTEST_XPI = "http://" + ip + "/" + relPath
+        test_bot.set(section, "FBTEST_XPI", FBTEST_XPI)
+        
+        # Localize testlist for the server
+        testlist = test_bot.get(section, "TEST_LIST")
+        relPath = getRelativeURL(testlist)
+        testlist = "http://" + ip + "/" + SVN_REVISION + "/" + relPath
+        test_bot.set(section, "TEST_LIST", testlist)
     
-    test_bot.close()
-    localizeConfig(os.path.join(opt.repo, "releases/firebug/test-bot.config"), opt.serverpath)    
+    with open(os.path.join(opt.repo, configDir), 'wb') as configfile:
+        test_bot.write(configfile)
 
     # Copy the files to the webserver
     os.system("cp -r " + os.path.join(opt.repo, "*") + " " + opt.serverpath)
@@ -145,16 +136,16 @@ def main(argv):
         os.mkdir(opt.repo)
 
     while (1):
+        print "[INFO] Updating server extensions and tests"
         try:
-            print "[INFO] Updating server extensions and tests"
             update(opt)
-            if opt.waitTime != None:
-                print "[INFO] Sleeping for " + str(opt.waitTime) + " hour" + ("s" if int(opt.waitTime) > 1 else "")
-                sleep(int(opt.waitTime) * 3600)
-            else:
-                break;
-        except Exception(e):
+        except Exception as e:
             print "[Error] Could not update the server files: " + str(e)
+        if opt.waitTime != None:
+            print "[INFO] Sleeping for " + str(opt.waitTime) + " hour" + ("s" if int(opt.waitTime) > 1 else "")
+            sleep(int(opt.waitTime) * 3600)
+        else:
+            break;
 
 
 if __name__ == '__main__':

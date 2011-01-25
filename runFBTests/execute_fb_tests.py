@@ -85,17 +85,17 @@ class FBWrapper:
         except Exception as e:
             print "[Warn] Could not delete temporary files in '" + self.tempdir + "': " + str(e)
 
-    def build_needed(self, build, buildpath):
+    def build_needed(self, version, build, buildpath):
         """
         Return True if the tests have never been run against the current changeset of 'build'
         Return False otherwise
         """
         # Find new changeset
         new_changeset = utils.get_changeset(buildpath)
-        if not build in self.changeset:
-            self.changeset[build] = -1
-        if self.changeset[build] != new_changeset:
-            self.changeset[build] = new_changeset
+        if not (version, build) in self.changeset:
+            self.changeset[(version, build)] = -1
+        if self.changeset[(version, build)] != new_changeset:
+            self.changeset[(version, build)] = new_changeset
             return True
         return False
         
@@ -112,12 +112,8 @@ class FBWrapper:
         """
         Downloads the builds and starts the tests
         """
-        # Lookup table mapping Firefox versions to Gecko versions (as specified in Firebug's test-bot.config)
-        lookup = { '3.5' : '1.9.1', '3.6' : '1.9.2', '3.7' : 'central', '4.0' : 'central' }                 # TODO Use Gecko versions in test-bot.config instead of Firefox versions so this isn't necessary
-
         # For each version of Firefox, see if there is a new changeset and run the tests
         for build in builds:
-            build = lookup[build]
             print "[Info] Running Firebug" + version + " tests against Mozilla " + build
 
             # Scrape for the latest tinderbox build and extract it to the basedir
@@ -158,7 +154,7 @@ class FBWrapper:
                 continue
             
             # If the newest tinderbox changeset is different from the previously run changeset
-            if self.build_needed(build, buildPath):
+            if self.build_needed(version, build, buildPath):
                 if self.platform == "darwin":
                     self.binary = buildPath
                 else:
@@ -171,6 +167,7 @@ class FBWrapper:
             # Remove build directories and temp files
             self.clean_temp_folder(build)
             
+        self.testlist = None
         return 0
 
     def run(self):
@@ -187,17 +184,16 @@ class FBWrapper:
                 for section in config.sections():
                     version = section[-3:]
                     if not self.version or version == self.version:
-                        if not self.testlist:
-                            try:
+                        try:
+                            if not self.testlist:
                                 self.testlist = config.get("Firebug" + version, "TEST_LIST")
-                            except Exception as e:
-                                print "[Error] Malformed config file: " + str(e)
-                                continue
-                        if not self.binary:
-                            builds = config.get("Firebug" + version, "FIREFOX_VERSION").split(",")
+                            if not self.binary:
+                                builds = config.get("Firebug" + version, "GECKO_VERSION").split(",")
+                        except Exception as e:
+                            print "[Error] Malformed config file: " + str(e)
+                            continue
             		                    
                         print "[Info] Starting builds and FBTests for Firebug" + version
-                		
                         # Run the build(s)
                         if not self.binary:
                             ret = self.prepare_builds(version, builds)
