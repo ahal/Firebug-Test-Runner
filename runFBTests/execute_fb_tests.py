@@ -161,13 +161,13 @@ class FBWrapper:
                     self.binary = os.path.join(buildPath, "firefox" + (".exe" if self.platform == "windows" else ""))
                 self.start_tests(version)
                 self.binary = None
-                self.testlist = None
             else:
                 print "[Info] Tests already run with this changeset"
                     
             # Remove build directories and temp files
             self.clean_temp_folder(build)
             
+        self.testlist = None
         return 0
 
     def run(self):
@@ -194,7 +194,6 @@ class FBWrapper:
                             continue
             		                    
                         print "[Info] Starting builds and FBTests for Firebug" + version
-                        print self.testlist
                         # Run the build(s)
                         if not self.binary:
                             ret = self.prepare_builds(version, builds)
