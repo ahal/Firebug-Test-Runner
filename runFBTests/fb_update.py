@@ -109,9 +109,9 @@ def update(opt):
         testlist = testlist.replace(relPath, SVN_REVISION + "/" + relPath)
         print testlist
         test_bot.set(section, "TEST_LIST", testlist)
-        test_bot.write(os.path.join(opt.repo, configDir))
     
-    test_bot.write(open(os.path.join(opt.repo, configDir)))
+    with open(os.path.join(opt.repo, configDir), 'wb') as configfile:
+        test_bot.write(configFile)
     
     # Change webserver to point to the local server's ip
     localizeConfig(os.path.join(opt.repo, configDir))    
