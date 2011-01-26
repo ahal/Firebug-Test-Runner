@@ -116,7 +116,6 @@ class FBRunner:
 
         # Ensure serverpath has correct format
         self.serverpath += ("" if self.serverpath[-1] == "/" else "/")
-        print self.serverpath
         
         # Ensure we have a testlist set
         if not self.testlist:
