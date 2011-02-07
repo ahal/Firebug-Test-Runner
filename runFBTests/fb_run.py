@@ -37,12 +37,13 @@
 #
 # ***** END LICENSE BLOCK *****
 
+from mozrunner import FirefoxRunner
+from mozprofile import FirefoxProfile
 from optparse import OptionParser
 from ConfigParser import ConfigParser
-import os, sys
-import mozrunner
+from time import sleep
 import fb_utils as utils
-import platform
+import os, sys, platform
 
 class FBRunner:
     def __init__(self, **kwargs): 
@@ -63,21 +64,17 @@ class FBRunner:
         self.config.read("test-bot.config")
         
         # Make sure we have a testlist
-        if !self.testlist:
-            self.testlist = self.config.get("Firebug"+self.version, "TEST_LIST");
+        if not self.testlist:
+            self.testlist = self.config.get("Firebug"+self.version, "TEST_LIST")
 
     def cleanup(self):
         """
         Remove temporarily downloaded files
         """
         try:
-            "Perform cleanup and exit"
-            if os.path.exists("firebug.xpi"):
-                os.remove("firebug.xpi")
-            if os.path.exists("fbtest.xpi"):
-                os.remove("fbtest.xpi")
-            if os.path.exists("test-bot.config"):
-                os.remove("test-bot.config")
+            for tmpFile in ["firebug.xpi", "fbtest.xpi", "test-bot.config"]:
+                if os.path.exists(tmpFile):
+                    os.remove(tmpFile)
         except Exception as e:
             print "[Warn] Could not clean up temporary files: " + str(e)        
         
@@ -101,7 +98,7 @@ class FBRunner:
             prefs.write("user_pref(\"extensions.checkCompatibility.4.0b\", false);\n")
             prefs.write("user_pref(\"extensions.checkCompatibility.4.0\", false);\n")
             prefs.write("user_pref(\"extensions.checkCompatibility.3.6\", false);\n")
-            prefs.close();
+            prefs.close()
         except Exception as e:
             print "[Warn] Could not disable compatibility check: " + str(e)
         
@@ -116,8 +113,9 @@ class FBRunner:
                 self.profile = None
             else:
                 # Move any potential existing log files to log_old folder
-                for name in os.listdir(os.path.join(self.profile, "firebug/fbtest/logs")):
-                    os.rename(os.path.join(self.profile, "firebug/fbtest/logs", name), os.path.join(self.profile, "firebug/fbtest/logs_old", name))
+                if os.path.exists(os.path.join(self.profile, "firebug/fbtest/logs")):
+                    for name in os.listdir(os.path.join(self.profile, "firebug/fbtest/logs")):
+                        os.rename(os.path.join(self.profile, "firebug/fbtest/logs", name), os.path.join(self.profile, "firebug/fbtest/logs_old", name))
 
         # Grab the extensions from server   
         try:
@@ -128,23 +126,19 @@ class FBRunner:
             return
 
         # Create environment variables
-        dict = os.environ
-        dict["XPC_DEBUG_WARN"] = "warn"     # Suppresses certain alert warnings that may sometimes appear
-
-        # If firefox is running, kill it (needed for mozrunner)
-        #mozrunner.kill_process_by_name("firefox" + (".exe" if self.platform == "windows" else "-bin"))
+        mozEnv = os.environ
+        mozEnv["XPC_DEBUG_WARN"] = "warn"     # Suppresses certain alert warnings that may sometimes appear
 
         # Create profile for mozrunner and start the Firebug tests
         print "[Info] Starting FBTests"
         try:
-            profile = mozrunner.FirefoxProfile(profile=self.profile, addons=["firebug.xpi", "fbtest.xpi"])
-            self.profile = profile.profile
+            mozProfile = FirefoxProfile(profile=self.profile, addons=["firebug.xpi", "fbtest.xpi"])
+            self.profile = mozProfile.profile
                     
             # Disable the compatibility check on startup
             self.disable_compatibilityCheck()
-            
-            runner = mozrunner.FirefoxRunner(binary=self.binary, profile=profile, 
-                                             cmdargs=["-runFBTests", self.testlist], env=dict)
+
+            runner = FirefoxRunner(profile=mozProfile, binary=self.binary, cmdargs=["-runFBTests", self.testlist], env=mozEnv)            
             runner.start()
         except Exception as e:
             self.cleanup()
@@ -160,7 +154,7 @@ class FBRunner:
                     logfile = open(os.path.join(self.profile, "firebug/fbtest/logs/", name))
             except OSError:
                 timeout += 1
-                mozrunner.sleep(1)
+                sleep(1)
                 
         # If log file was not found, create our own log file
         if not logfile:
@@ -169,17 +163,18 @@ class FBRunner:
         # If log file found, exit when fbtests finished (if no activity, wait up to 10 min)
         else:
             line, timeout = "", 0
-            while line.find("Test Suite Finished") == -1 and timeout < 600:
+            while timeout < 600:
                 line = logfile.readline()
                 if line == "":
-                    mozrunner.sleep(1)
+                    sleep(1)
                     timeout += 1
                 else:
+                    print line.rstrip()
+                    if line.find("Test Suite Finished") != -1:
+                        break
                     timeout = 0
             
         # Cleanup
-        #mozrunner.kill_process_by_name("crashreporter" + (".exe" if self.platform == "windows" else ""))
-        #mozrunner.kill_process_by_name("firefox" + (".exe" if self.platform == "windows" else "-bin"))
         self.cleanup()
 
 
