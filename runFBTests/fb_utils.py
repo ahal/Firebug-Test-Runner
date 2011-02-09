@@ -76,7 +76,7 @@ def create_log(profile, binary, testlist):
         logfile = open(os.path.join(profile, "firebug/firebug-test.log"), "w")        
         logfile.writelines(content)
         return logfile
-    except Exception as e:
+    except Exception, e:
         print "[Warn] Failed to synthesize log file: " + str(e)
 
 def download(url, savepath):

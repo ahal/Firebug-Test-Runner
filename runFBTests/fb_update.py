@@ -139,7 +139,7 @@ def main(argv):
         print "[INFO] Updating server extensions and tests"
         try:
             update(opt)
-        except Exception as e:
+        except Exception, e:
             print "[Error] Could not update the server files: " + str(e)
         if opt.waitTime != None:
             print "[INFO] Sleeping for " + str(opt.waitTime) + " hour" + ("s" if int(opt.waitTime) > 1 else "")

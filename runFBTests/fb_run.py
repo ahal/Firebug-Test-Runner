@@ -1,4 +1,4 @@
-#!/usr/bin/python
+!/usr/bin/python
 
 # ***** BEGIN LICENSE BLOCK *****
 # Version: MPL 1.1/GPL 2.0/LGPL 2.1
@@ -75,7 +75,7 @@ class FBRunner:
             for tmpFile in ["firebug.xpi", "fbtest.xpi", "test-bot.config"]:
                 if os.path.exists(tmpFile):
                     os.remove(tmpFile)
-        except Exception as e:
+        except Exception, e:
             print "[Warn] Could not clean up temporary files: " + str(e)        
         
     def get_extensions(self):
@@ -99,7 +99,7 @@ class FBRunner:
             prefs.write("user_pref(\"extensions.checkCompatibility.4.0\", false);\n")
             prefs.write("user_pref(\"extensions.checkCompatibility.3.6\", false);\n")
             prefs.close()
-        except Exception as e:
+        except Exception, e:
             print "[Warn] Could not disable compatibility check: " + str(e)
         
     def run(self):
@@ -120,7 +120,7 @@ class FBRunner:
         # Grab the extensions from server   
         try:
             self.get_extensions()
-        except Exception as e:
+        except Exception, e:
             self.cleanup()
             print "[Error] Extensions could not be downloaded: " + str(e)
             return
@@ -140,7 +140,7 @@ class FBRunner:
 
             runner = FirefoxRunner(profile=mozProfile, binary=self.binary, cmdargs=["-runFBTests", self.testlist], env=mozEnv)            
             runner.start()
-        except Exception as e:
+        except Exception, e:
             self.cleanup()
             print "[Error] Could not start Firefox: " + str(e)
             return
