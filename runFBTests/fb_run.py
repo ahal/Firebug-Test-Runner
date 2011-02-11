@@ -193,8 +193,8 @@ class FBRunner:
 
         # Find the log file
         timeout, logfile = 0, 0
-        # Wait up to 20 seconds for the log file to be initialized
-        while not logfile and timeout < 20:
+        # Wait up to 60 seconds for the log file to be initialized
+        while not logfile and timeout < 60:
             try:
                 for name in os.listdir(os.path.join(self.profile, "firebug/fbtest/logs")):
                     logfile = open(os.path.join(self.profile, "firebug/fbtest/logs/", name))
@@ -269,7 +269,9 @@ def cli(argv=sys.argv[1:]):
     
     runner = FBRunner(binary=opt.binary, profile=opt.profile, serverpath=opt.serverpath, 
                                     version=opt.version, testlist=opt.testlist, log=opt.log, debug=opt.debug)
-    runner.run()
-    
+    return runner.run()
+
 if __name__ == '__main__':
-    cli()
+	sys.exit(cli())
+
+
