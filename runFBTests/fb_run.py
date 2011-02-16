@@ -236,7 +236,7 @@ class FBRunner:
         # Cleanup
         logfile.close()
         mozRunner.stop()
-		self.cleanup()
+        self.cleanup()
         self.log.debug("Exiting - Status successful")
         return 0
 
