@@ -234,7 +234,9 @@ class FBRunner:
             self.log.warn("Possible crash detected - test run aborted")
             
         # Cleanup
-        self.cleanup()
+        logfile.close()
+        mozRunner.stop()
+		self.cleanup()
         self.log.debug("Exiting - Status successful")
         return 0
 
@@ -273,5 +275,3 @@ def cli(argv=sys.argv[1:]):
 
 if __name__ == '__main__':
 	sys.exit(cli())
-
-
