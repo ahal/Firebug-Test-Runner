@@ -202,7 +202,6 @@ class FBRunner:
             self.log.debug("Creating Firefox profile and installing extensions")
             mozProfile = FirefoxProfile(profile=self.profile, addons=["firebug.xpi", "fbtest.xpi"])
             self.profile = mozProfile.profile
-            print self.profile
             
             # Disable the compatibility check on startup
             if self.binary:
@@ -277,7 +276,7 @@ def cli(argv=sys.argv[1:]):
                       help="The profile to use when running Firefox")
                         
     parser.add_option("-s", "--serverpath", dest="serverpath", 
-                      help="The http server containing the Firebug tests (default is https://getfirebug.com)")
+                      help="The http server containing the Firebug tests")
                         
     parser.add_option("-v", "--version", dest="version",
                       help="The firebug version to run")
