@@ -47,6 +47,8 @@ import subprocess
 import shutil
 import optparse
 import urllib2
+import socket
+import platform
 
 def getRelativeURL(url):
     if (url.find("http://") != -1):           
@@ -60,8 +62,9 @@ def getRelativeURL(url):
     
 def update(opt):
     # Get server's ip address
-    proc = subprocess.Popen("ifconfig | grep 'inet addr:' | cut -d: -f2 | grep -v '127.0.0.1' | awk '{ print $1}'", shell=True, stdout=subprocess.PIPE)
-    ip = proc.communicate()[0].rstrip()
+    dummy = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    dummy.connect(('google.com', 0))
+    ip = dummy.getsockname()[0]
     
     # Grab the test_bot.config file
     configDir = "releases/firebug/test-bot.config"
@@ -113,8 +116,11 @@ def update(opt):
     with open(os.path.join(opt.repo, configDir), 'wb') as configfile:
         test_bot.write(configfile)
 
-    # Copy the files to the webserver
-    os.system("cp -r " + os.path.join(opt.repo, "*") + " " + opt.serverpath)
+    # Copy the files to the webserver document root (shutil.copytree won't work, settle for this)
+    if platform.system().lower() == "windows":
+        os.system("xcopy " + os.path.join(opt.repo, "*") + " " + opt.serverpath + "/E")
+    else:
+        os.system("cp -r " + os.path.join(opt.repo, "*") + " " + opt.serverpath)
 
 def main(argv):
     # Parse command line
