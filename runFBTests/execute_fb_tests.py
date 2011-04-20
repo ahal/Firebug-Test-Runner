@@ -114,6 +114,10 @@ class FBWrapper:
         """
         # For each version of Firefox, see if there is a new changeset and run the tests
         for build in builds:
+            # put this here because the firebug team sometimes forgets and puts 'mozilla-central' instead of central
+            if build.lower() == "mozilla-central":
+                build = "central";
+
             print "[Info] Running Firebug" + version + " tests against Mozilla " + build
 
             # Scrape for the latest tinderbox build and extract it to the basedir
