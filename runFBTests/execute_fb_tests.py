@@ -126,7 +126,7 @@ class FBWrapper:
                 buildPath = os.path.join(self.tempdir, "mozilla-" + build);
                 
                 # Get the url to the latest tinderbox build
-                proc = subprocess.Popen("get-latest-tinderbox --debug --product=mozilla-" + build, shell=True, stdout=subprocess.PIPE)
+                proc = subprocess.Popen("get-latest-tinderbox --product=mozilla-" + build, shell=True, stdout=subprocess.PIPE)
                 tinderbox_url = proc.communicate()[0]
                 
                 # Download and extract the tinderbox build
