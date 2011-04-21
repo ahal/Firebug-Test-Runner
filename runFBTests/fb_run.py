@@ -93,7 +93,20 @@ class FBRunner:
         """
         try:
             prefs = open(os.path.join(self.profile, "prefs.js"), "a")
+            prefs.write("user_pref(\"extensions.checkCompatibility.8.0b\", false);\n")
+            prefs.write("user_pref(\"extensions.checkCompatibility.8.0a\", false);\n")
+            prefs.write("user_pref(\"extensions.checkCompatibility.8.0\", false);\n")
+            prefs.write("user_pref(\"extensions.checkCompatibility.7.0b\", false);\n")
+            prefs.write("user_pref(\"extensions.checkCompatibility.7.0a\", false);\n")
+            prefs.write("user_pref(\"extensions.checkCompatibility.7.0\", false);\n")
+            prefs.write("user_pref(\"extensions.checkCompatibility.6.0b\", false);\n")
+            prefs.write("user_pref(\"extensions.checkCompatibility.6.0a\", false);\n")
+            prefs.write("user_pref(\"extensions.checkCompatibility.6.0\", false);\n")
+            prefs.write("user_pref(\"extensions.checkCompatibility.5.0b\", false);\n")
+            prefs.write("user_pref(\"extensions.checkCompatibility.5.0a\", false);\n")
+            prefs.write("user_pref(\"extensions.checkCompatibility.5.0\", false);\n")
             prefs.write("user_pref(\"extensions.checkCompatibility.4.0b\", false);\n")
+            prefs.write("user_pref(\"extensions.checkCompatibility.4.0a\", false);\n")
             prefs.write("user_pref(\"extensions.checkCompatibility.4.0\", false);\n")
             prefs.write("user_pref(\"extensions.checkCompatibility.3.6\", false);\n")
             prefs.close();
