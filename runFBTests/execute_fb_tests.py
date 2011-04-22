@@ -53,18 +53,19 @@ else:
 class FBWrapper:
     def __init__(self, **kwargs):
         # Initialization
-        self.binary = kwargs["binary"]
-        self.profile = kwargs["profile"]
-        self.serverpath = kwargs["serverpath"]
-        self.version = kwargs["version"]
-        self.couchURI = kwargs["couchURI"]
-        self.databasename = kwargs["databasename"]
-        self.testlist = kwargs["testlist"]
-        self.waitTime = kwargs["waitTime"]
+        self.binary = kwargs.get("binary")
+        self.profile = kwargs.get("profile")
+        self.serverpath = kwargs.get("serverpath")
+        self.version = kwargs.get("version")
+        self.couchURI = kwargs.get("couchURI")
+        self.databasename = kwargs.get("databasename")
+        self.testlist = kwargs.get("testlist")
+        self.waitTime = kwargs.get("waitTime")
+        self.debug = kwargs.get("debug")
         self.platform = platform.system().lower()
         
         self.tempdir = tempfile.gettempdir();                               # Temporary directory to store tinderbox builds and temporary profiles                          
-        self.serverpath += ("" if self.serverpath[-1] == "/" else "/")      # Ensure serverpath has correct format
+        self.serverpath = self.serverpath.rstrip("/") + "/"                 # Ensure serverpath has correct format
         self.changeset = {}                                                 # Map to keep track of the last changeset of each build that was run (to prevent running twice on the same changeset)
     
     def clean_temp_folder(self, build=False):
@@ -208,9 +209,9 @@ class FBWrapper:
                 		    
                         if ret != 0:
                             print ret
-            except Exception as e:
+            except Exception, e:
         	    print "[Error] Could not run the FBTests"
-        	    raise(e)
+        	    raise
             		
             
             if not self.waitTime:
@@ -256,10 +257,14 @@ def cli(argv=sys.argv[1:]):
                       
     parser.add_option("--interval", dest="waitTime",
                       help="Number of hours to wait between test runs. If unspecified tests are only run once")
+    
+    parser.add_option("--debug", dest="debug",
+                      action="store_true",
+                      help="Enable debug logging")
     (opt, remainder) = parser.parse_args(argv)
     
     wrapper = FBWrapper(binary=opt.binary, profile=opt.profile, serverpath=opt.serverpath, version=opt.version, 
-                                    couchURI=opt.couchURI, databasename=opt.databasename, testlist=opt.testlist, waitTime=opt.waitTime)
+                        couchURI=opt.couchURI, databasename=opt.databasename, testlist=opt.testlist, waitTime=opt.waitTime, debug=opt.debug)
     wrapper.run()
    
 if __name__ == '__main__':
