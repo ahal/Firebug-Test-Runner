@@ -86,29 +86,23 @@ class FBRunner:
         utils.download(FIREBUG_XPI, "firebug.xpi")
         utils.download(FBTEST_XPI, "fbtest.xpi")
 
-    def disable_compatibilityCheck(self):
+    def disable_compatibility_check(self):
         """
         Disables compatibility check which could
         potentially prompt the user for action
         """
         try:
+            app = ConfigParser()
+            app.read(os.path.join(os.path.dirname(self.binary), "application.ini"))
+            ver = app.get("App", "Version")
+            index = max(ver.find('a'), ver.find('b'))
+            if index > -1:
+                ver = ver[:index]
+
             prefs = open(os.path.join(self.profile, "prefs.js"), "a")
-            prefs.write("user_pref(\"extensions.checkCompatibility.8.0b\", false);\n")
-            prefs.write("user_pref(\"extensions.checkCompatibility.8.0a\", false);\n")
-            prefs.write("user_pref(\"extensions.checkCompatibility.8.0\", false);\n")
-            prefs.write("user_pref(\"extensions.checkCompatibility.7.0b\", false);\n")
-            prefs.write("user_pref(\"extensions.checkCompatibility.7.0a\", false);\n")
-            prefs.write("user_pref(\"extensions.checkCompatibility.7.0\", false);\n")
-            prefs.write("user_pref(\"extensions.checkCompatibility.6.0b\", false);\n")
-            prefs.write("user_pref(\"extensions.checkCompatibility.6.0a\", false);\n")
-            prefs.write("user_pref(\"extensions.checkCompatibility.6.0\", false);\n")
-            prefs.write("user_pref(\"extensions.checkCompatibility.5.0b\", false);\n")
-            prefs.write("user_pref(\"extensions.checkCompatibility.5.0a\", false);\n")
-            prefs.write("user_pref(\"extensions.checkCompatibility.5.0\", false);\n")
-            prefs.write("user_pref(\"extensions.checkCompatibility.4.0b\", false);\n")
-            prefs.write("user_pref(\"extensions.checkCompatibility.4.0a\", false);\n")
-            prefs.write("user_pref(\"extensions.checkCompatibility.4.0\", false);\n")
-            prefs.write("user_pref(\"extensions.checkCompatibility.3.6\", false);\n")
+            prefs.write("user_pref(\"extensions.checkCompatibility." + ver + "\", false);\n")
+            prefs.write("user_pref(\"extensions.checkCompatibility." + ver + "a\", false);\n")
+            prefs.write("user_pref(\"extensions.checkCompatibility." + ver + "b\", false);\n")
             prefs.close();
         except Exception as e:
             print "[Warn] Could not disable compatibility check: " + str(e)
@@ -128,7 +122,7 @@ class FBRunner:
                     os.rename(os.path.join(self.profile, "firebug/fbtest/logs", name), os.path.join(self.profile, "firebug/fbtest/logs_old", name))
 
         # Ensure serverpath has correct format
-        self.serverpath += ("" if self.serverpath[-1] == "/" else "/")
+        self.serverpath = self.serverpath.rstrip("/") + "/"
         
         # Ensure we have a testlist set
         if not self.testlist:
@@ -159,7 +153,7 @@ class FBRunner:
             self.profile = profile.profile
                     
             # Disable the compatibility check on startup
-            self.disable_compatibilityCheck()
+            self.disable_compatibility_check()
             
             runner = mozrunner.FirefoxRunner(binary=self.binary, profile=profile, 
                                              cmdargs=["-runFBTests", self.testlist], env=dict)
