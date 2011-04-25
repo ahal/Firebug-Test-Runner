@@ -91,6 +91,8 @@ class FBWrapper:
         Return True if the tests have never been run against the current changeset of 'build'
         Return False otherwise
         """
+        if self.platform == 'darwin':
+            buildpath = os.path.join(buildpath, 'Contents', 'MacOS')
         # Find new changeset
         new_changeset = utils.get_changeset(buildpath)
         if not (version, build) in self.changeset:

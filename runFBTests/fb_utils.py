@@ -52,7 +52,7 @@ def parse_rdf(lines, tagname):
             return line[line.find(">") + 1:line.rfind("<")]
     return -1
     
-def create_log(profile, binary, testlist):
+def create_log(profile, appdir, testlist):
     """
     In the event that the FBTests fail to run and no log file is created,
     create our own to send to the database.
@@ -64,7 +64,7 @@ def create_log(profile, binary, testlist):
         logfile = open(os.path.join(profile, "extensions/fbtest@mozilla.com/install.rdf"))
         content.append("FIREBUG INFO | FBTest: " + parse_rdf(logfile.readlines(), "version") + "\n")
         parser = ConfigParser()
-        parser.read(os.path.join(os.path.dirname(binary), "application.ini"))
+        parser.read(os.path.join(appdir, "application.ini"))
         content.append("FIREBUG INFO | App Name: " + parser.get("App", "Name") + "\n")
         content.append("FIREBUG INFO | App Version: " + parser.get("App", "Version") + "\n")
         content.append("FIREBUG INFO | App Platform: " + parser.get("Gecko", "MaxVersion") + "\n")
@@ -96,6 +96,5 @@ def get_changeset(buildpath):
     Return the changeset of the build located at 'buildpath'
     """
     app_ini = ConfigParser()
-    appPath = os.path.join(buildpath, ("Contents/MacOS" if platform.system().lower() == "darwin" else ""))
-    app_ini.read(os.path.join(appPath, "application.ini"))
+    app_ini.read(os.path.join(buildpath, "application.ini"))
     return app_ini.get("App", "SourceStamp")

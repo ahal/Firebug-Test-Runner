@@ -79,14 +79,7 @@ class FBRunner:
         # log file, we don't know whether there was a crash or the test is just taking awhile.
         # Make 1 minute the timeout for tests.
         self.TEST_TIMEOUT = 60        
-        
-        # Get version of Firefox being run (only possible if we were passed in a binary)
-        self.appVersion = ""
-        if self.binary:
-            app = ConfigParser()
-            app.read(os.path.join(os.path.dirname(self.binary), "application.ini"))
-            ver = app.get("App", "Version").rstrip("0123456789pre")    # Version should be of the form '3.6' or '4.0b' and not the whole string
-            self.appVersion = ver[:-1] if ver[-1]=="." else ver
+       
         
         # Read in fb-test-runner.config for local configuration
         localConfig = ConfigParser()
@@ -96,6 +89,9 @@ class FBRunner:
         
         # Ensure serverpath has correct format
         self.serverpath = self.serverpath.rstrip("/") + "/"
+
+        # Get the platform independent app directory and version
+        self.appdir, self.appVersion = self.get_app_info()
 
         # Make sure we have a firebug version
         if not self.version:
@@ -142,6 +138,21 @@ class FBRunner:
         outfile = open(savepath, 'wb')
         outfile.write(ret.read())
         outfile.close()
+
+    def get_app_info(self):
+        # Get version of Firefox being run (only possible if we were passed in a binary)
+        ver, appdir = None, None
+        if self.binary:
+            if self.platform == 'darwin':
+                appdir = os.path.join(self.binary, 'Contents', 'MacOS')
+            else:
+                appdir = os.path.dirname(self.binary)
+            app = ConfigParser()
+            app.read(os.path.join(appdir, "application.ini"))
+            ver = app.get("App", "Version").rstrip("0123456789pre")    # Version should be of the form '3.6' or '4.0b' and not the whole string
+            ver = ver[:-1] if ver[-1]=="." else ver
+        return appdir, ver
+        
         
     def get_extensions(self):
         """
@@ -178,10 +189,10 @@ class FBRunner:
                 self.profile = None
             else:
                 # Move any potential existing log files to log_old folder
-                if os.path.exists(os.path.join(self.profile, "firebug/fbtest/logs")):
+                if os.path.exists(os.path.join(self.profile, "firebug", "fbtest", "logs")):
                     self.log.debug("Moving existing log files to archive")
-                    for name in os.listdir(os.path.join(self.profile, "firebug/fbtest/logs")):
-                        os.rename(os.path.join(self.profile, "firebug/fbtest/logs", name), os.path.join(self.profile, "firebug/fbtest/logs_old", name))
+                    for name in os.listdir(os.path.join(self.profile, "firebug", "fbtest", "logs")):
+                        os.rename(os.path.join(self.profile, "firebug", "fbtest", "logs", name), os.path.join(self.profile, "firebug", "fbtest", "logs_old", name))
 
         # Grab the extensions from server   
         try:
@@ -210,11 +221,13 @@ class FBRunner:
             self.log.debug("Creating Firefox runner")
             mozRunner = FirefoxRunner(profile=mozProfile, binary=self.binary, cmdargs=["-no-remote", "-runFBTests", self.testlist], env=mozEnv)
             self.binary = mozRunner.binary
+            if not self.appVersion:
+                self.appdir, self.appVersion = self.get_app_info()
            
              # Disable the compatibility check on startup
             self.disable_compatibility_check()
             
-            self.log.debug("Running Firefox with cmdargs '-runFBTests " + self.testlist + "'")
+            self.log.debug("Running Firefox with cmdargs '-no-remote -runFBTests " + self.testlist + "'")
             mozRunner.start()
         except Exception, e:
             self.log.error("Could not start Firefox: " + str(e))
@@ -226,8 +239,8 @@ class FBRunner:
         # Wait up to 60 seconds for the log file to be initialized
         while not logfile and timeout < 60:
             try:
-                for name in os.listdir(os.path.join(self.profile, "firebug/fbtest/logs")):
-                    logfile = open(os.path.join(self.profile, "firebug/fbtest/logs/", name), 'r')
+                for name in os.listdir(os.path.join(self.profile, "firebug", "fbtest", "logs")):
+                    logfile = open(os.path.join(self.profile, "firebug", "fbtest", "logs", name), 'r')
             except Exception:
                 timeout += 1
                 sleep(1)
@@ -235,7 +248,7 @@ class FBRunner:
         # If log file was not found
         if not logfile:
             self.log.error("Could not find the log file in profile '" + self.profile + "'")
-            logfile = utils.create_log(self.profile, self.binary, self.testlist)
+            logfile = utils.create_log(self.profile, self.appdir, self.testlist)
         # If log file found, exit when fbtests finished (if no activity, wait up self.TEST_TIMEOUT)
         else:
             line, timeout = "", 0
@@ -274,7 +287,7 @@ class FBRunner:
         self.log.info("Sending log file to couchdb at '" + self.couchURI + "'")
         try:
             fb_logs.main(["--log", filename, "--database", self.databasename, "--couch", self.couchURI,
-                             "--changeset", utils.get_changeset((self.binary if self.platform == "darwin" else os.path.dirname(self.binary)))])
+                             "--changeset", utils.get_changeset(self.appdir)])
         except Exception, e:
             self.log.error("Log file not sent to couchdb at server: '" + self.couchURI + "' and database: '" + self.databasename + "': " + str(e))
         
