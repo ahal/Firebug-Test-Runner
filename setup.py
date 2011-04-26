@@ -43,7 +43,7 @@ summ = """This tool will allow you to automate the process of running the Firebu
 a variety of different configurations."""
 
 PACKAGE_NAME = "runFBTests"
-PACKAGE_VERSION = "1.1.1"
+PACKAGE_VERSION = "1.2.0"
 
 deps = ["mozrunner >= 3.0a",
         "couchquery >= 0.9",
