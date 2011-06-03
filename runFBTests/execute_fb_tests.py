@@ -166,7 +166,10 @@ class FBWrapper:
                     self.binary = buildPath
                 else:
                     self.binary = os.path.join(buildPath, "firefox" + (".exe" if self.platform == "windows" else ""))
-                self.start_tests(version)
+                try:
+                    self.start_tests(version)
+                except Exception, e:
+                    print "[Error] Running Firebug" + version + " against Mozilla " + build + " failed"
                 self.binary = None
             else:
                 print "[Info] Tests already run with this changeset"

@@ -123,6 +123,8 @@ class FBRunner:
                 if os.path.exists(tmpFile):
                     self.log.debug("Removing " + tmpFile)
                     os.remove(tmpFile)
+            self.log.removeHandler(self.log_handler)
+            self.log_handler.close()
         except Exception, e:
             self.log.warn("Could not clean up temporary files: " + str(e))
             
@@ -248,7 +250,13 @@ class FBRunner:
         # If log file was not found
         if not logfile:
             self.log.error("Could not find the log file in profile '" + self.profile + "'")
-            logfile = utils.create_log(self.profile, self.appdir, self.testlist)
+            try:
+                logfile = utils.create_log(self.profile, self.appdir, self.testlist)
+            except Exception, e:
+                self.log.error("Could not synthesize a log file: " + str(e))
+                self.cleanup()
+                raise
+
         # If log file found, exit when fbtests finished (if no activity, wait up self.TEST_TIMEOUT)
         else:
             line, timeout = "", 0
@@ -261,26 +269,25 @@ class FBRunner:
                     if line.find("Test Suite Finished") != -1:
                         break
                     timeout = 0
+            # If there was a timeout, then there was most likely a crash (however could also be failure in FBTest console or test itself)
+            if timeout >= self.TEST_TIMEOUT:
+                logfile.seek(1)
+                line = logfile.readlines()[-1]
+                if line.find("FIREBUG INFO") != -1:
+                    line = line[line.find("|") + 1:].lstrip()   # Extract the test name from log line
+                    line = line[:line.find("|")].rstrip()
+                else:
+                    line = "Unknown Test"
+                filename = logfile.name
+                logfile.close()
+                logfile = open(filename, 'a')
+                msg = "FIREBUG TEST-UNEXPECTED-FAIL | " + line + " | Possible Firefox crash detected\n"
+                logfile.write(msg)       # Print out crash message with offending test
+                self.log.warn("Possible crash detected - test run aborted")
 
         # Give last two lines of file a chance to write and send log file to fb_logs  
         sleep(1)
         filename = logfile.name
-        
-        # If there was a timeout, then there was most likely a crash (however could also be failure in FBTest console or test itself)
-        if timeout >= self.TEST_TIMEOUT:
-            logfile.seek(1)
-            line = logfile.readlines()[-1]
-            if line.find("FIREBUG INFO") != -1:
-                line = line[line.find("|") + 1:].lstrip()   # Extract the test name from log line
-                line = line[:line.find("|")].rstrip()
-            else:
-                line = "Unknown Test"
-            logfile.close()
-            logfile = open(os.path.join(self.profile, "firebug", "fbtests", "logs", filename), 'a')
-            msg = "FIREBUG TEST-UNEXPECTED-FAIL | " + line + " | Possible Firefox crash detected\n"
-            logfile.write(msg)       # Print out crash message with offending test
-            self.log.warn("Possible crash detected - test run aborted")
-        
         logfile.close()
 
         # Send log file to couchdb    
@@ -293,10 +300,8 @@ class FBRunner:
         
         # Cleanup
         mozRunner.stop()
-        self.cleanup()
         self.log.debug("Exiting - Status successful")
-        self.log.removeHandler(self.log_handler)
-        self.log_handler.close()
+        self.cleanup()
 
 
 # Called from the command line

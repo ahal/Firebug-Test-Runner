@@ -57,27 +57,27 @@ def create_log(profile, appdir, testlist):
     In the event that the FBTests fail to run and no log file is created,
     create our own to send to the database.
     """
-    try:
-        content = []
-        logfile = open(os.path.join(profile, "extensions/firebug@software.joehewitt.com/install.rdf"))
-        content.append("FIREBUG INFO | Firebug: " + parse_rdf(logfile.readlines(), "version") + "\n")
-        logfile = open(os.path.join(profile, "extensions/fbtest@mozilla.com/install.rdf"))
-        content.append("FIREBUG INFO | FBTest: " + parse_rdf(logfile.readlines(), "version") + "\n")
-        parser = ConfigParser()
-        parser.read(os.path.join(appdir, "application.ini"))
-        content.append("FIREBUG INFO | App Name: " + parser.get("App", "Name") + "\n")
-        content.append("FIREBUG INFO | App Version: " + parser.get("App", "Version") + "\n")
-        content.append("FIREBUG INFO | App Platform: " + parser.get("Gecko", "MaxVersion") + "\n")
-        content.append("FIREBUG INFO | App BuildID: " + parser.get("App", "BuildID") + "\n")
-        content.append("FIREBUG INFO | Export Date: " + datetime.datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S GMT") + "\n")
-        content.append("FIREBUG INFO | Test Suite: " + testlist + "\n")
-        content.append("FIREBUG INFO | Total Tests: 0\n")
-        content.append("FIREBUG INFO | Fail | [START] Could not start FBTests\n")
-        logfile = open(os.path.join(profile, "firebug/firebug-test.log"), "w")        
-        logfile.writelines(content)
-        return logfile
-    except Exception as e:
-        print "[Warn] Failed to synthesize log file: " + str(e)
+    content = []
+    logfile = open(os.path.join(profile, "extensions/firebug@software.joehewitt.com/install.rdf"))
+    content.append("FIREBUG INFO | Firebug: " + parse_rdf(logfile.readlines(), "version") + "\n")
+    logfile = open(os.path.join(profile, "extensions/fbtest@mozilla.com/install.rdf"))
+    content.append("FIREBUG INFO | FBTest: " + parse_rdf(logfile.readlines(), "version") + "\n")
+    parser = ConfigParser()
+    parser.read(os.path.join(appdir, "application.ini"))
+    content.append("FIREBUG INFO | App Name: " + parser.get("App", "Name") + "\n")
+    content.append("FIREBUG INFO | App Version: " + parser.get("App", "Version") + "\n")
+    content.append("FIREBUG INFO | App Platform: " + parser.get("Gecko", "MaxVersion") + "\n")
+    content.append("FIREBUG INFO | App BuildID: " + parser.get("App", "BuildID") + "\n")
+    content.append("FIREBUG INFO | Export Date: " + datetime.datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S GMT") + "\n")
+    content.append("FIREBUG INFO | Test Suite: " + testlist + "\n")
+    content.append("FIREBUG INFO | Total Tests: 0\n")
+    content.append("FIREBUG INFO | Fail | [START] Could not start FBTests\n")
+    logdir = os.path.join(profile, "firebug", "fbtest", "logs")
+    if not os.path.exists(logdir):
+        os.makedirs(logdir)
+    logfile = open(os.path.join(logdir, "firebug-test.log"), "w")        
+    logfile.writelines(content)
+    return logfile
 
 def download(url, savepath):
     """
