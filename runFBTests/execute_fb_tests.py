@@ -144,7 +144,7 @@ class FBWrapper:
                             appName = appFile
                             break
                     subprocess.call("cp -r " + os.path.join(appDir, appName) + " " + buildPath, shell=True)
-                    subprocess.call("hdiutil unmount " + appDir, shell=True)
+                    subprocess.call("hdiutil detach " + appDir, shell=True)
                     buildPath = os.path.join(buildPath, appName)
                 else:
                     if self.platform == "windows":
