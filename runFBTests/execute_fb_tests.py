@@ -207,13 +207,13 @@ class FBWrapper:
                         # Run the build(s)
                         if not self.binary:
                             ret = self.prepare_builds(version, builds)
+                            if ret != 0:
+                                print ret
                         else:
                 		    self.start_tests(version)
                 		    
                         self.clean_temp_folder()
                 		    
-                        if ret != 0:
-                            print ret
             except Exception, e:
         	    print "[Error] Could not run the FBTests"
         	    raise
