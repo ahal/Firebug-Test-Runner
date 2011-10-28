@@ -36,7 +36,7 @@
 #
 # ***** END LICENSE BLOCK *****
 
-# This script will grab all of the latest firebug releases, as well as 
+# This script will grab all of the latest firebug releases, as well as
 # the fbtests and testlists and store them on the local webserver
 from ConfigParser import ConfigParser
 from time import sleep
@@ -47,80 +47,76 @@ import subprocess
 import shutil
 import optparse
 import urllib2
+import urlparse
 import socket
 import platform
 
 def getRelativeURL(url):
-    if (url.find("http://") != -1):           
-        index = url[7:].find("/") + 7
-    elif (FIREBUG_XPI.find("https://") != -1):
-        index = url[8:].find("/") + 8
-    else:
-        index = url.find("/")
-    return url[index+1:]
+    return urlparse.urlsplit(url).path.lstrip('/')
 
-    
 def update(opt):
     # Get server's ip address
     dummy = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     dummy.connect(('google.com', 0))
     ip = dummy.getsockname()[0]
-    
+
     # Grab the test_bot.config file
     configDir = "releases/firebug/test-bot.config"
     utils.download("http://getfirebug.com/" + configDir, os.path.join(opt.repo, configDir))
-    
+
     # Parse the config file
     test_bot = ConfigParser()
     test_bot.read(os.path.join(opt.repo, configDir))
-    
+
     # For each section in config file, download specified files and move to webserver
     for section in test_bot.sections():
         # Grab config information
         SVN_REVISION = test_bot.get(section, "SVN_REVISION")
         FIREBUG_XPI = test_bot.get(section, "FIREBUG_XPI")
         FBTEST_XPI = test_bot.get(section, "FBTEST_XPI")
-        
+
         # Update or create the svn test repository
         if not os.path.isdir(os.path.join(opt.repo, ".svn")):
             os.system("svn co http://fbug.googlecode.com/svn/tests/ " + os.path.join(opt.repo, SVN_REVISION, "tests") + " -r " + SVN_REVISION)
         else:
             os.system(os.path.join(opt.repo, "svn") + " update -r " + SVN_REVISION)
-        
+
         # Download the extensions
         print FIREBUG_XPI
         relPath = getRelativeURL(FIREBUG_XPI)
         savePath = os.path.join(opt.repo, relPath)
         utils.download(FIREBUG_XPI, savePath)
-        
+
         print FBTEST_XPI
         relPath = getRelativeURL(FBTEST_XPI)
         savePath = os.path.join(opt.repo, relPath)
         utils.download(FBTEST_XPI, savePath)
-        
+
         # Localize extensions for the server
         relPath = getRelativeURL(FIREBUG_XPI)
         FIREBUG_XPI = "http://" + ip + "/" + relPath
         test_bot.set(section, "FIREBUG_XPI", FIREBUG_XPI)
-        
+
         relPath = getRelativeURL(FBTEST_XPI)
         FBTEST_XPI = "http://" + ip + "/" + relPath
         test_bot.set(section, "FBTEST_XPI", FBTEST_XPI)
-        
+
         # Localize testlist for the server
         testlist = test_bot.get(section, "TEST_LIST")
         relPath = getRelativeURL(testlist)
         testlist = "http://" + ip + "/" + SVN_REVISION + "/" + relPath
         test_bot.set(section, "TEST_LIST", testlist)
-    
+
     with open(os.path.join(opt.repo, configDir), 'wb') as configfile:
         test_bot.write(configfile)
 
     # Copy the files to the webserver document root (shutil.copytree won't work, settle for this)
     if platform.system().lower() == "windows":
         os.system("xcopy " + os.path.join(opt.repo, "*") + " " + opt.serverpath + "/E")
+        print "xcopy " + os.path.join(opt.repo, "*") + " " + opt.serverpath + "/E"
     else:
         os.system("cp -r " + os.path.join(opt.repo, "*") + " " + opt.serverpath)
+        print "cp -r " + os.path.join(opt.repo, "*") + " " + opt.serverpath
 
 def main(argv):
     # Parse command line
@@ -128,16 +124,16 @@ def main(argv):
     parser.add_option("-d", "--document-root", dest="serverpath",
                       default="/var/www",
                       help="Path to the Apache2 document root Firebug directory")
-                    
+
     parser.add_option("--repo", dest="repo",
                       default=os.path.join(os.getcwd(), "files"),
                       help="Location to create or update the local FBTest repository")
-                    
+
     parser.add_option("-i", "--interval", dest="waitTime",
                       help="The number of hours to wait between checking for updates")
-                    
+
     (opt, remainder) = parser.parse_args(argv)
-    
+
     if not os.path.exists(opt.repo):
         os.mkdir(opt.repo)
 
