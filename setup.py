@@ -45,7 +45,7 @@ a variety of different configurations."""
 PACKAGE_NAME = "runFBTests"
 PACKAGE_VERSION = "1.2.0"
 
-deps = ["mozrunner >= 3.0a",
+deps = ["mozrunner >= 4.0",
         "couchquery >= 0.9",
         "getlatesttinderbox >= 0.2.5",]
 

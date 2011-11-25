@@ -16,3 +16,10 @@ specify their own server if desired.  For this case, they should use the
 
 Current results of three VM's running this module are posted here:
 http://getfirebug.com/testresults
+
+# Installation
+
+The Firebug Test Runner uses lxml which requires the following packages to be installed: python-dev, libxslt1-dev and libxml2
+
+
+To install simply run 'python setup.py install' (into a virtualenv of course!)
