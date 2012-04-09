@@ -54,6 +54,20 @@ import platform
 def getRelativeURL(url):
     return urlparse.urlsplit(url).path.lstrip('/')
 
+def recursivecopy(src, dest):
+    if not os.path.exists(dest):
+        os.makedirs(dest)
+
+    # Copy the files to the webserver document root (shutil.copytree won't work, settle for this)
+    if platform.system().lower() == "windows":
+        subprocess.Popen("xcopy " + os.path.join(src, "*") + " " + dest + "/E",
+                shell=True).wait()
+        print "xcopy " + os.path.join(src, "*") + " " + dest + "/E"
+    else:
+        subprocess.Popen("cp -r " + os.path.join(src, "*") + " " + dest,
+                shell=True).wait()
+        print "cp -r " + os.path.join(src, "*") + " " + dest
+
 def update(opt):
     # Get server's ip address
     dummy = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -62,24 +76,63 @@ def update(opt):
 
     # Grab the test_bot.config file
     configDir = "releases/firebug/test-bot.config"
-    utils.download("http://getfirebug.com/" + configDir, os.path.join(opt.repo, configDir))
-
+    #utils.download("http://getfirebug.com/" + configDir, os.path.join(opt.repo, configDir))
+    utils.download("http://people.mozilla.org/~ctalbert/testme.config",
+            os.path.join(opt.repo, configDir))
     # Parse the config file
     test_bot = ConfigParser()
     test_bot.read(os.path.join(opt.repo, configDir))
+    isSVN = True
 
     # For each section in config file, download specified files and move to webserver
     for section in test_bot.sections():
-        # Grab config information
-        SVN_REVISION = test_bot.get(section, "SVN_REVISION")
+        # Get information from config file
+        if test_bot.has_option(section, "GIT_TAG"):
+            isSVN = False
+            GIT_TAG = test_bot.get(section, "GIT_TAG")
+
+            #Ensure we have a git repo to work with
+            fbugsrc = os.path.join(opt.repo, "firebug")
+            if not os.path.isdir(fbugsrc):
+                subprocess.Popen(["git","clone","https://github.com/firebug/firebug.git",
+                    fbugsrc]).communicate()
+
+            # Because we may have added new tags we need to pull before we find
+            # our specific reivision
+            subprocess.Popen(["git", "pull" , "origin", "master"],
+                    cwd=fbugsrc).communicate()
+
+            # Check out the tag for the git repo - this assumes we always work
+            # off tags, branches or specific commit hashes.
+            subprocess.Popen(["git", "checkout", GIT_TAG], cwd=fbugsrc).communicate()
+
+            # Copy this to a directory using the GIT_TAG so that we can deal
+            # with multiple tags in this loop (we exit the loop before copying
+            # to the server location and there is no real way to handle both
+            # git and svn unless we hack this way.
+            recursivecopy(fbugsrc, os.path.join(opt.repo, GIT_TAG))
+            mytag = GIT_TAG
+
+        else:
+            SVN_REVISION = test_bot.get(section, "SVN_REVISION")
+
+            # Update or create the svn test repository
+            if not os.path.isdir(os.path.join(opt.repo, ".svn")):
+                os.system("svn co http://fbug.googlecode.com/svn/tests/ " + os.path.join(opt.repo, SVN_REVISION, "tests") + " -r " + SVN_REVISION)
+            else:
+                subprocess.Popen(os.path.join(opt.repo, "svn") + " update -r "
+                        + SVN_REVISION, shell=True).wait()
+
+            mytag = SVN_REVISION
+
+        # Localize testlist for the server
+        testlist = test_bot.get(section, "TEST_LIST")
+        relPath = getRelativeURL(testlist)
+        testlist = "http://" + ip + "/" + mytag + "/" + relPath
+        test_bot.set(section, "TEST_LIST", testlist)
+
         FIREBUG_XPI = test_bot.get(section, "FIREBUG_XPI")
         FBTEST_XPI = test_bot.get(section, "FBTEST_XPI")
-
-        # Update or create the svn test repository
-        if not os.path.isdir(os.path.join(opt.repo, ".svn")):
-            os.system("svn co http://fbug.googlecode.com/svn/tests/ " + os.path.join(opt.repo, SVN_REVISION, "tests") + " -r " + SVN_REVISION)
-        else:
-            os.system(os.path.join(opt.repo, "svn") + " update -r " + SVN_REVISION)
 
         # Download the extensions
         print FIREBUG_XPI
@@ -101,22 +154,15 @@ def update(opt):
         FBTEST_XPI = "http://" + ip + "/" + relPath
         test_bot.set(section, "FBTEST_XPI", FBTEST_XPI)
 
-        # Localize testlist for the server
-        testlist = test_bot.get(section, "TEST_LIST")
-        relPath = getRelativeURL(testlist)
-        testlist = "http://" + ip + "/" + SVN_REVISION + "/" + relPath
-        test_bot.set(section, "TEST_LIST", testlist)
-
     with open(os.path.join(opt.repo, configDir), 'wb') as configfile:
         test_bot.write(configfile)
 
     # Copy the files to the webserver document root (shutil.copytree won't work, settle for this)
-    if platform.system().lower() == "windows":
-        os.system("xcopy " + os.path.join(opt.repo, "*") + " " + opt.serverpath + "/E")
-        print "xcopy " + os.path.join(opt.repo, "*") + " " + opt.serverpath + "/E"
-    else:
-        os.system("cp -r " + os.path.join(opt.repo, "*") + " " + opt.serverpath)
-        print "cp -r " + os.path.join(opt.repo, "*") + " " + opt.serverpath
+    recursivecopy(opt.repo, opt.serverpath)
+    if not isSVN:
+        # Then you have a copy of the git repo in opt.serverpath/firebug directory
+        # we'll remove that to reduce confusion.
+        shutil.rmtree(os.path.join(opt.serverpath, "firebug"))
 
 def main(argv):
     # Parse command line
