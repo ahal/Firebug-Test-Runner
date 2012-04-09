@@ -76,9 +76,7 @@ def update(opt):
 
     # Grab the test_bot.config file
     configDir = "releases/firebug/test-bot.config"
-    #utils.download("http://getfirebug.com/" + configDir, os.path.join(opt.repo, configDir))
-    utils.download("http://people.mozilla.org/~ctalbert/testme.config",
-            os.path.join(opt.repo, configDir))
+    utils.download("http://getfirebug.com/" + configDir, os.path.join(opt.repo, configDir))
     # Parse the config file
     test_bot = ConfigParser()
     test_bot.read(os.path.join(opt.repo, configDir))
