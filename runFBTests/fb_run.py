@@ -42,28 +42,15 @@ from ConfigParser import ConfigParser, NoOptionError, NoSectionError
 from time import sleep
 import fb_logs
 import fb_utils as utils
-import logging
+import mozlog
 import urllib2
 import os, sys, platform
 
 class FBRunner:
     def __init__(self, **kwargs):
         # Set up the log file or use stdout if none specified
-        logLevel = logging.DEBUG if kwargs.get('debug') else logging.INFO
-        filename = kwargs.get('log')
-        self.log = logging.getLogger("FIREBUG")
-        if filename:
-            dirname = os.path.dirname(filename)
-            if dirname and not os.path.exists(dirname):
-                os.makedirs(dirname)
-            self.log_handler = logging.FileHandler(filename)
-            format = "%(asctime)s - %(name)s %(levelname)s | %(message)s"
-        else:
-            self.log_handler = logging.StreamHandler()
-            format = "%(name)s %(levelname)s | %(message)s"
-        self.log_handler.setFormatter(logging.Formatter(format))
-        self.log.addHandler(self.log_handler)
-        self.log.setLevel(logLevel)
+        self.log = mozlog.getLogger('FIREBUG', kwargs.get('log'))
+        self.log.setLevel(mozlog.DEBUG if kwargs.get('debug') else mozlog.INFO)
 
         # Initialization  
         self.binary = kwargs.get('binary')

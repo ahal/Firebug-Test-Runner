@@ -44,6 +44,7 @@ import optparse
 import subprocess
 import tempfile
 import platform
+import mozlog
 
 if platform.system().lower() == "windows":
     import zipfile
@@ -52,6 +53,10 @@ else:
 
 class FBWrapper:
     def __init__(self, **kwargs):
+        # Set up the log file or use stdout if none specified
+        self.log = mozlog.getLogger('FIREBUG', kwargs.get('log'))
+        self.log.setLevel(mozlog.DEBUG if kwargs.get('debug') else mozlog.INFO)
+
         # Initialization
         self.binary = kwargs.get("binary")
         self.profile = kwargs.get("profile")
@@ -84,7 +89,7 @@ class FBWrapper:
                 if os.path.isdir(os.path.join(self.tempdir, filename)) and filename[0:3] == "tmp":            
                     shutil.rmtree(os.path.join(self.tempdir, filename))
         except Exception as e:
-            print "[Warn] Could not delete temporary files in '" + self.tempdir + "': " + str(e)
+            self.log.warn("Could not delete temporary files in '" + self.tempdir + "': " + str(e))
 
     def build_needed(self, version, build, buildpath):
         """
@@ -121,7 +126,7 @@ class FBWrapper:
             if build.lower() == "mozilla-central":
                 build = "central";
 
-            print "[Info] Running Firebug" + version + " tests against Mozilla " + build
+            self.log.info("Running Firebug" + version + " tests against Mozilla " + build)
 
             # Scrape for the latest tinderbox build and extract it to the basedir
             try:
@@ -157,7 +162,7 @@ class FBWrapper:
                     bundle.close()
                     buildPath = os.path.join(buildPath, "firefox")
             except Exception as e:
-                print "[Error] Could not prepare the latest tinderbox build: " + str(e)
+                self.log.error("Could not prepare the latest tinderbox build: " + str(e))
                 continue
             
             # If the newest tinderbox changeset is different from the previously run changeset
@@ -169,10 +174,10 @@ class FBWrapper:
                 try:
                     self.start_tests(version)
                 except Exception, e:
-                    print "[Error] Running Firebug" + version + " against Mozilla " + build + " failed"
+                    self.log.error("Running Firebug" + version + " against Mozilla " + build + " failed")
                 self.binary = None
             else:
-                print "[Info] Tests already run with this changeset"
+                self.log.info("Tests already run with this changeset")
                     
             # Remove build directories and temp files
             self.clean_temp_folder(build)
@@ -200,22 +205,22 @@ class FBWrapper:
                             if not self.binary:
                                 builds = config.get("Firebug" + version, "GECKO_VERSION").split(",")
                         except Exception as e:
-                            print "[Error] Malformed config file: " + str(e)
+                            self.log.error("Malformed config file: " + str(e))
                             continue
             		                    
-                        print "[Info] Starting builds and FBTests for Firebug" + version
+                        self.log.info("Starting builds and FBTests for Firebug" + version)
                         # Run the build(s)
                         if not self.binary:
                             ret = self.prepare_builds(version, builds)
                             if ret != 0:
-                                print ret
+                                self.log.error(ret)
                         else:
                 		    self.start_tests(version)
                 		    
                         self.clean_temp_folder()
                 		    
             except Exception, e:
-        	    print "[Error] Could not run the FBTests"
+        	    self.log.error("Could not run the FBTests")
         	    raise
             		
             
@@ -223,7 +228,7 @@ class FBWrapper:
                 break;
             
             # Wait for specified number of hours
-            print "[Info] Sleeping for " + str(self.waitTime) + " hour" + ("s" if int(self.waitTime) > 1 else "")
+            self.log.info("Sleeping for " + str(self.waitTime) + " hour" + ("s" if int(self.waitTime) > 1 else ""))
             sleep(int(self.waitTime) * 3600)
             
             if os.path.isfile("test-bot.config"):
