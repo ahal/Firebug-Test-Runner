@@ -42,28 +42,16 @@ from ConfigParser import ConfigParser, NoOptionError, NoSectionError
 from time import sleep
 import fb_logs
 import fb_utils as utils
-import logging
+import mozlog
 import urllib2
+import traceback
 import os, sys, platform
 
 class FBRunner:
     def __init__(self, **kwargs):
         # Set up the log file or use stdout if none specified
-        logLevel = logging.DEBUG if kwargs.get('debug') else logging.INFO
-        filename = kwargs.get('log')
-        self.log = logging.getLogger("FIREBUG")
-        if filename:
-            dirname = os.path.dirname(filename)
-            if dirname and not os.path.exists(dirname):
-                os.makedirs(dirname)
-            self.log_handler = logging.FileHandler(filename)
-            format = "%(asctime)s - %(name)s %(levelname)s | %(message)s"
-        else:
-            self.log_handler = logging.StreamHandler()
-            format = "%(name)s %(levelname)s | %(message)s"
-        self.log_handler.setFormatter(logging.Formatter(format))
-        self.log.addHandler(self.log_handler)
-        self.log.setLevel(logLevel)
+        self.log = mozlog.getLogger('FIREBUG', kwargs.get('log'))
+        self.log.setLevel(mozlog.DEBUG if kwargs.get('debug') else mozlog.INFO)
 
         # Initialization  
         self.binary = kwargs.get('binary')
@@ -106,6 +94,7 @@ class FBRunner:
             self.download(self.serverpath + "releases/firebug/test-bot.config", "test-bot.config")
         except urllib2.URLError:
             self.log.error("Could not download test-bot.config, check that '" + self.serverpath + "releases/firebug/test-bot.config' is valid")
+            self.log.error(traceback.format_exc())
             raise
         self.config = ConfigParser()
         self.config.read("test-bot.config")
@@ -123,10 +112,10 @@ class FBRunner:
                 if os.path.exists(tmpFile):
                     self.log.debug("Removing " + tmpFile)
                     os.remove(tmpFile)
-            self.log.removeHandler(self.log_handler)
-            self.log_handler.close()
+            mozlog.shutdown()
         except Exception, e:
-            self.log.warn("Could not clean up temporary files: " + str(e))
+            self.log.warn("Could not clean up temporary files")
+            self.log.warn(traceback.format_exc())
             
     def download(self, url, savepath):
         """
@@ -178,7 +167,8 @@ class FBRunner:
             prefs.write("user_pref(\"extensions.checkCompatibility." + self.appVersion + "\", false);\n")
             prefs.close()
         except Exception, e:
-            self.log.warn("Could not disable compatibility check: " + str(e))
+            self.log.warn("Could not disable compatibility check")
+            self.log.warn(traceback.format_exc())
 
     def run(self):
         """
@@ -200,11 +190,13 @@ class FBRunner:
         try:
             self.get_extensions()
         except (NoSectionError, NoOptionError), e:            
-            self.log.error("Extensions could not be downloaded, malformed test-bot.config: " + str(e))
+            self.log.error("Extensions could not be downloaded, malformed test-bot.config")
+            self.log.error(traceback.format_exc())
             self.cleanup()
             raise
         except urllib2.URLError, e:
-            self.log.error("Extensions could not be downloaded, urllib2 error: " + str(e))
+            self.log.error("Extensions could not be downloaded, urllib2 error")
+            self.log.error(traceback.format_exc())
             self.cleanup()
             raise
     
@@ -217,7 +209,8 @@ class FBRunner:
         self.log.info("Starting Firebug Tests")
         try:
             self.log.debug("Creating Firefox profile and installing extensions")
-            mozProfile = FirefoxProfile(profile=self.profile, addons=["firebug.xpi", "fbtest.xpi"])
+            prefs = {"extensions.update.enabled" : "false"}
+            mozProfile = FirefoxProfile(profile=self.profile, addons=["firebug.xpi", "fbtest.xpi"], preferences=prefs)
             self.profile = mozProfile.profile
             
             self.log.debug("Creating Firefox runner")
@@ -229,10 +222,11 @@ class FBRunner:
              # Disable the compatibility check on startup
             self.disable_compatibility_check()
             
-            self.log.debug("Running Firefox with cmdargs '-no-remote -runFBTests " + self.testlist + "'")
+            self.log.debug("Running '" + self.binary + " -no-remote -runFBTests " + self.testlist + "'")
             mozRunner.start()
         except Exception, e:
-            self.log.error("Could not start Firefox: " + str(e))
+            self.log.error("Could not start Firefox")
+            self.log.error(traceback.format_exc())
             self.cleanup()
             raise
 
@@ -249,11 +243,13 @@ class FBRunner:
                 
         # If log file was not found
         if not logfile:
-            self.log.error("Could not find the log file in profile '" + self.profile + "'")
+            self.log.error("Could not find the log file in '" + self.profile + "'")
+            self.log.info("This usually indicates the FBTest extension was not started")
             try:
                 logfile = utils.create_log(self.profile, self.appdir, self.testlist)
             except Exception, e:
-                self.log.error("Could not synthesize a log file: " + str(e))
+                self.log.error("Could not synthesize a log file")
+                self.log.error(traceback.format_exc())
                 self.cleanup()
                 raise
 
@@ -296,7 +292,8 @@ class FBRunner:
             fb_logs.main(["--log", filename, "--database", self.databasename, "--couch", self.couchURI,
                              "--changeset", utils.get_changeset(self.appdir)])
         except Exception, e:
-            self.log.error("Log file not sent to couchdb at server: '" + self.couchURI + "' and database: '" + self.databasename + "': " + str(e))
+            self.log.error("Log file not sent to couchdb at server: '" + self.couchURI + "' and database: '" + self.databasename)
+            self.log.error(traceback.format_exc())
         
         # Cleanup
         mozRunner.stop()
