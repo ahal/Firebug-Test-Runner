@@ -197,7 +197,7 @@ class FBWrapper:
                 config.read("test-bot.config")
                 
                 for section in config.sections():
-                    version = section[-3:]
+                    version = section[len(section.rstrip('0123456789.')):]
                     if not self.version or version == self.version:
                         try:
                             if not self.testlist:
