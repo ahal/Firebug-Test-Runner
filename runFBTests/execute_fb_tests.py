@@ -225,10 +225,9 @@ class FBWrapper:
                         self.clean_temp_folder()
                 		    
             except Exception, e:
-        	    self.log.error("Could not run the FBTests")
+                self.log.error("Could not run the FBTests")
                 self.log.error(traceback.format_exc())
            	    raise
-            		
             
             if not self.waitTime:
                 break;
