@@ -44,6 +44,7 @@ import fb_logs
 import fb_utils as utils
 import mozlog
 import urllib2
+import traceback
 import os, sys, platform
 
 class FBRunner:
@@ -93,6 +94,7 @@ class FBRunner:
             self.download(self.serverpath + "releases/firebug/test-bot.config", "test-bot.config")
         except urllib2.URLError:
             self.log.error("Could not download test-bot.config, check that '" + self.serverpath + "releases/firebug/test-bot.config' is valid")
+            self.log.error(traceback.format_exc())
             raise
         self.config = ConfigParser()
         self.config.read("test-bot.config")
@@ -113,7 +115,8 @@ class FBRunner:
             self.log.removeHandler(self.log_handler)
             self.log_handler.close()
         except Exception, e:
-            self.log.warn("Could not clean up temporary files: " + str(e))
+            self.log.warn("Could not clean up temporary files")
+            self.log.warn(traceback.format_exc())
             
     def download(self, url, savepath):
         """
@@ -165,7 +168,8 @@ class FBRunner:
             prefs.write("user_pref(\"extensions.checkCompatibility." + self.appVersion + "\", false);\n")
             prefs.close()
         except Exception, e:
-            self.log.warn("Could not disable compatibility check: " + str(e))
+            self.log.warn("Could not disable compatibility check")
+            self.log.warn(traceback.format_exc())
 
     def run(self):
         """
@@ -187,11 +191,13 @@ class FBRunner:
         try:
             self.get_extensions()
         except (NoSectionError, NoOptionError), e:            
-            self.log.error("Extensions could not be downloaded, malformed test-bot.config: " + str(e))
+            self.log.error("Extensions could not be downloaded, malformed test-bot.config")
+            self.log.error(traceback.format_exc())
             self.cleanup()
             raise
         except urllib2.URLError, e:
-            self.log.error("Extensions could not be downloaded, urllib2 error: " + str(e))
+            self.log.error("Extensions could not be downloaded, urllib2 error")
+            self.log.error(traceback.format_exc())
             self.cleanup()
             raise
     
@@ -219,7 +225,8 @@ class FBRunner:
             self.log.debug("Running Firefox with cmdargs '-no-remote -runFBTests " + self.testlist + "'")
             mozRunner.start()
         except Exception, e:
-            self.log.error("Could not start Firefox: " + str(e))
+            self.log.error("Could not start Firefox")
+            self.log.error(traceback.format_exc())
             self.cleanup()
             raise
 
@@ -236,11 +243,13 @@ class FBRunner:
                 
         # If log file was not found
         if not logfile:
-            self.log.error("Could not find the log file in profile '" + self.profile + "'")
+            self.log.error("Could not find the log file in '" + self.profile + "'")
+            self.log.info("This usually indicates the FBTest extension was not started")
             try:
                 logfile = utils.create_log(self.profile, self.appdir, self.testlist)
             except Exception, e:
-                self.log.error("Could not synthesize a log file: " + str(e))
+                self.log.error("Could not synthesize a log file")
+                self.log.error(traceback.format_exc())
                 self.cleanup()
                 raise
 
@@ -283,7 +292,8 @@ class FBRunner:
             fb_logs.main(["--log", filename, "--database", self.databasename, "--couch", self.couchURI,
                              "--changeset", utils.get_changeset(self.appdir)])
         except Exception, e:
-            self.log.error("Log file not sent to couchdb at server: '" + self.couchURI + "' and database: '" + self.databasename + "': " + str(e))
+            self.log.error("Log file not sent to couchdb at server: '" + self.couchURI + "' and database: '" + self.databasename)
+            self.log.error(traceback.format_exc())
         
         # Cleanup
         mozRunner.stop()

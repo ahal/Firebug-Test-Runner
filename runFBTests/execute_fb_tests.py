@@ -44,6 +44,7 @@ import optparse
 import subprocess
 import tempfile
 import platform
+import traceback
 import mozlog
 
 if platform.system().lower() == "windows":
@@ -88,8 +89,9 @@ class FBWrapper:
             for filename in os.listdir(self.tempdir):
                 if os.path.isdir(os.path.join(self.tempdir, filename)) and filename[0:3] == "tmp":            
                     shutil.rmtree(os.path.join(self.tempdir, filename))
-        except Exception as e:
-            self.log.warn("Could not delete temporary files in '" + self.tempdir + "': " + str(e))
+        except Exception, e:
+            self.log.warn("Could not delete temporary files in '" + self.tempdir)
+            self.log.warn(traceback.format_exc())
 
     def build_needed(self, version, build, buildpath):
         """
@@ -161,8 +163,9 @@ class FBWrapper:
                     bundle.extractall(buildPath)
                     bundle.close()
                     buildPath = os.path.join(buildPath, "firefox")
-            except Exception as e:
-                self.log.error("Could not prepare the latest tinderbox build: " + str(e))
+            except Exception, e:
+                self.log.error("Could not prepare the latest tinderbox build")
+                self.log.error(traceback.format_exc())
                 continue
             
             # If the newest tinderbox changeset is different from the previously run changeset
@@ -175,6 +178,7 @@ class FBWrapper:
                     self.start_tests(version)
                 except Exception, e:
                     self.log.error("Running Firebug" + version + " against Mozilla " + build + " failed")
+                    self.log.error(traceback.format_exc())
                 self.binary = None
             else:
                 self.log.info("Tests already run with this changeset")
@@ -204,8 +208,9 @@ class FBWrapper:
                                 self.testlist = config.get("Firebug" + version, "TEST_LIST")
                             if not self.binary:
                                 builds = config.get("Firebug" + version, "GECKO_VERSION").split(",")
-                        except Exception as e:
-                            self.log.error("Malformed config file: " + str(e))
+                        except Exception, e:
+                            self.log.error("Could not parse config file")
+                            self.log.error(traceback.format_exc())
                             continue
             		                    
                         self.log.info("Starting builds and FBTests for Firebug" + version)
@@ -221,6 +226,7 @@ class FBWrapper:
                 		    
             except Exception, e:
         	    self.log.error("Could not run the FBTests")
+                self.log.error(traceback.format_exc())
         	    raise
             		
             
