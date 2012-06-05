@@ -46,6 +46,7 @@ PACKAGE_NAME = "runFBTests"
 PACKAGE_VERSION = "1.2.1"
 
 deps = ["mozrunner >= 4.1",
+        "mozlog >= 1.0",
         "couchquery >= 0.9",
         "getlatesttinderbox >= 0.2.5",]
 

@@ -212,7 +212,7 @@ class FBWrapper:
                             self.log.error("Could not parse config file")
                             self.log.error(traceback.format_exc())
                             continue
-            		                    
+                                        
                         self.log.info("Starting builds and FBTests for Firebug" + version)
                         # Run the build(s)
                         if not self.binary:
@@ -220,14 +220,14 @@ class FBWrapper:
                             if ret != 0:
                                 self.log.error(ret)
                         else:
-                		    self.start_tests(version)
-                		    
+                            self.start_tests(version)
+                            
                         self.clean_temp_folder()
-                		    
+                            
             except Exception, e:
                 self.log.error("Could not run the FBTests")
                 self.log.error(traceback.format_exc())
-           	    raise
+                raise
             
             if not self.waitTime:
                 break;
