@@ -227,7 +227,7 @@ class FBWrapper:
             except Exception, e:
         	    self.log.error("Could not run the FBTests")
                 self.log.error(traceback.format_exc())
-        	    raise
+           	    raise
             		
             
             if not self.waitTime:
