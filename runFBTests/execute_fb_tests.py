@@ -113,7 +113,7 @@ class FBWrapper:
         """
         Start the tests by invoking fb_run
         """
-        runner = fb_run.FBRunner(binary=self.binary, profile=self.profile, serverpath=self.serverpath, version=version, 
+        runner = fb_run.FBRunner(binary=self.binary, profile=self.profile, serverpath=self.serverpath, version=version, debug=self.debug,
                                                         couchURI=self.couchURI, databasename=self.databasename, testlist=self.testlist)
         runner.run()
     
