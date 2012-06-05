@@ -112,8 +112,7 @@ class FBRunner:
                 if os.path.exists(tmpFile):
                     self.log.debug("Removing " + tmpFile)
                     os.remove(tmpFile)
-            self.log.removeHandler(self.log_handler)
-            self.log_handler.close()
+            mozlog.shutdown()
         except Exception, e:
             self.log.warn("Could not clean up temporary files")
             self.log.warn(traceback.format_exc())
@@ -222,7 +221,7 @@ class FBRunner:
              # Disable the compatibility check on startup
             self.disable_compatibility_check()
             
-            self.log.debug("Running Firefox with cmdargs '-no-remote -runFBTests " + self.testlist + "'")
+            self.log.debug("Running '" + self.binary + " -no-remote -runFBTests " + self.testlist + "'")
             mozRunner.start()
         except Exception, e:
             self.log.error("Could not start Firefox")
