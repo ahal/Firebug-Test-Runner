@@ -54,8 +54,9 @@ import mozlog
 import traceback
 
 class FBUpdater:
-    TESTLIST_LOCATION = "tests/content/firebug.html"
     FIREBUG_REPO = "https://github.com/firebug/firebug.git"
+    TESTLIST_LOCATION = "tests/content/firebug.html"
+    CONFIG_LOCATION = "releases/firebug/test-bot.config"
 
     def __init__(self, **kwargs):
         # Set up the log file or use stdout if none specified
@@ -91,11 +92,10 @@ class FBUpdater:
         ip = dummy.getsockname()[0]
 
         # Grab the test_bot.config file
-        configDir = "releases/firebug/test-bot.config"
-        utils.download("http://getfirebug.com/" + configDir, os.path.join(self.repo, configDir))
+        utils.download("http://getfirebug.com/" + CONFIG_LOCATION, os.path.join(self.repo, CONFIG_LOCATION))
         # Parse the config file
         test_bot = ConfigParser()
-        test_bot.read(os.path.join(self.repo, configDir))
+        test_bot.read(os.path.join(self.repo, CONFIG_LOCATION))
         isSVN = True
 
         # For each section in config file, download specified files and move to webserver
@@ -113,8 +113,14 @@ class FBUpdater:
             if not os.path.isdir(fbugsrc):
                 subprocess.Popen(["git","clone", FIREBUG_REPO, fbugsrc]).communicate()
 
+            # Create the branch in case it doesn't exist. If it does git will
+            # spit out an error message which we can ignore
+            subprocess.Popen(["git","branch",GIT_BRANCH,"origin/"+GIT_BRANCH],
+                    cwd=fbugsrc).communicate()
+
             # Because we may have added new tags we need to pull before we find
-            # our specific reivision
+            # our specific revision
+            subprocess.Popen(["git","checkout",GIT_BRANCH], cwd=fbugsrc).communicate()
             subprocess.Popen(["git", "pull" , "origin", GIT_BRANCH],
                     cwd=fbugsrc).communicate()
 
@@ -122,15 +128,11 @@ class FBUpdater:
             # off tags, branches or specific commit hashes.
             subprocess.Popen(["git", "checkout", GIT_TAG], cwd=fbugsrc).communicate()
 
-            # Copy this to a directory using the GIT_TAG so that we can deal
-            # with multiple tags in this loop (we exit the loop before copying
-            # to the server location and there is no real way to handle both
-            # git and svn unless we hack this way.
-            recursivecopy(fbugsrc, os.path.join(self.repo, GIT_TAG))
-            mytag = GIT_TAG
+            # Copy this to the serverpath
+            recursivecopy(fbugsrc, os.path.join(self.serverpath, GIT_TAG))
         
             # Localize testlist for the server
-            testlist = "http://" + ip + "/" + mytag + "/" + TESTLIST_LOCATION
+            testlist = "http://" + ip + "/" + GIT_TAG + "/" + TESTLIST_LOCATION
             test_bot.set(section, "TEST_LIST", testlist)
 
             FIREBUG_XPI = test_bot.get(section, "FIREBUG_XPI")
@@ -156,16 +158,9 @@ class FBUpdater:
             FBTEST_XPI = "http://" + ip + "/" + relPath
             test_bot.set(section, "FBTEST_XPI", FBTEST_XPI)
 
-
-        with open(os.path.join(self.repo, configDir), 'wb') as configfile:
+        # Write the complete config file
+        with open(os.path.join(self.serverpath, CONFIG_LOCATION), 'wb') as configfile:
             test_bot.write(configfile)
-
-        # Copy the files to the webserver document root (shutil.copytree won't work, settle for this)
-        recursivecopy(self.repo, self.serverpath)
-        if not isSVN:
-            # Then you have a copy of the git repo in self.serverpath/firebug directory
-            # we'll remove that to reduce confusion.
-            shutil.rmtree(os.path.join(self.serverpath, "firebug"))
 
 def main(argv):
     # Parse command line
