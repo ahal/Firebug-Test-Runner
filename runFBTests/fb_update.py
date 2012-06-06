@@ -50,54 +50,72 @@ import urllib2
 import urlparse
 import socket
 import platform
+import mozlog
+import traceback
 
-def getRelativeURL(url):
-    return urlparse.urlsplit(url).path.lstrip('/')
+class FBUpdater:
+    TESTLIST_LOCATION = "tests/content/firebug.html"
+    FIREBUG_REPO = "https://github.com/firebug/firebug.git"
 
-def recursivecopy(src, dest):
-    if not os.path.exists(dest):
-        os.makedirs(dest)
+    def __init__(self, **kwargs):
+        # Set up the log file or use stdout if none specified
+        self.log = mozlog.getLogger('FB_UPDATE', kwargs.get('log'))
+        self.log.setLevel(mozlog.DEBUG if kwargs.get('debug') else mozlog.INFO)
 
-    # Copy the files to the webserver document root (shutil.copytree won't work, settle for this)
-    if platform.system().lower() == "windows":
-        subprocess.Popen("xcopy " + os.path.join(src, "*") + " " + dest + "/E",
-                shell=True).wait()
-        print "xcopy " + os.path.join(src, "*") + " " + dest + "/E"
-    else:
-        subprocess.Popen("cp -r " + os.path.join(src, "*") + " " + dest,
-                shell=True).wait()
-        print "cp -r " + os.path.join(src, "*") + " " + dest
+        self.repo = kwargs.get('repo')
+        self.serverpath = kwargs.get('serverpath')
 
-def update(opt):
-    # Get server's ip address
-    dummy = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    dummy.connect(('google.com', 0))
-    ip = dummy.getsockname()[0]
+    def getRelativeURL(self, url):
+        return urlparse.urlsplit(url).path.lstrip('/')
 
-    # Grab the test_bot.config file
-    configDir = "releases/firebug/test-bot.config"
-    utils.download("http://getfirebug.com/" + configDir, os.path.join(opt.repo, configDir))
-    # Parse the config file
-    test_bot = ConfigParser()
-    test_bot.read(os.path.join(opt.repo, configDir))
-    isSVN = True
+    def recursivecopy(self, src, dest):
+        if not os.path.exists(dest):
+            os.makedirs(dest)
 
-    # For each section in config file, download specified files and move to webserver
-    for section in test_bot.sections():
-        # Get information from config file
-        if test_bot.has_option(section, "GIT_TAG"):
-            isSVN = False
+        # Copy the files to the webserver document root (shutil.copytree won't work, settle for this)
+        if platform.system().lower() == "windows":
+            subprocess.Popen("xcopy " + os.path.join(src, "*") + " " + dest + "/E",
+                    shell=True).wait()
+            self.log.debug("xcopy " + os.path.join(src, "*") + " " + dest + "/E")
+        else:
+            subprocess.Popen("cp -r " + os.path.join(src, "*") + " " + dest,
+                    shell=True).wait()
+            self.log.debug("cp -r " + os.path.join(src, "*") + " " + dest)
+
+    def update(self):
+        self.log.info("Updating server extensions and tests")
+
+        # Get server's ip address
+        dummy = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        dummy.connect(('mozilla.org', 0))
+        ip = dummy.getsockname()[0]
+
+        # Grab the test_bot.config file
+        configDir = "releases/firebug/test-bot.config"
+        utils.download("http://getfirebug.com/" + configDir, os.path.join(self.repo, configDir))
+        # Parse the config file
+        test_bot = ConfigParser()
+        test_bot.read(os.path.join(self.repo, configDir))
+        isSVN = True
+
+        # For each section in config file, download specified files and move to webserver
+        for section in test_bot.sections():
+            # Get information from config file
+            if not (test_bot.has_option(section, "GIT_TAG") or test_bot.has_option(section, "GIT_BRANCH")):
+                self.log.error("GIT_TAG and GIT_BRANCH must be specified for '" + section "'")
+                continue
+
             GIT_TAG = test_bot.get(section, "GIT_TAG")
+            GIT_BRANCH = test_bot.get(section, "GIT_BRANCH")
 
             #Ensure we have a git repo to work with
-            fbugsrc = os.path.join(opt.repo, "firebug")
+            fbugsrc = os.path.join(self.repo, "firebug")
             if not os.path.isdir(fbugsrc):
-                subprocess.Popen(["git","clone","https://github.com/firebug/firebug.git",
-                    fbugsrc]).communicate()
+                subprocess.Popen(["git","clone", FIREBUG_REPO, fbugsrc]).communicate()
 
             # Because we may have added new tags we need to pull before we find
             # our specific reivision
-            subprocess.Popen(["git", "pull" , "origin", "master"],
+            subprocess.Popen(["git", "pull" , "origin", GIT_BRANCH],
                     cwd=fbugsrc).communicate()
 
             # Check out the tag for the git repo - this assumes we always work
@@ -108,59 +126,46 @@ def update(opt):
             # with multiple tags in this loop (we exit the loop before copying
             # to the server location and there is no real way to handle both
             # git and svn unless we hack this way.
-            recursivecopy(fbugsrc, os.path.join(opt.repo, GIT_TAG))
+            recursivecopy(fbugsrc, os.path.join(self.repo, GIT_TAG))
             mytag = GIT_TAG
+        
+            # Localize testlist for the server
+            testlist = "http://" + ip + "/" + mytag + "/" + TESTLIST_LOCATION
+            test_bot.set(section, "TEST_LIST", testlist)
 
-        else:
-            SVN_REVISION = test_bot.get(section, "SVN_REVISION")
+            FIREBUG_XPI = test_bot.get(section, "FIREBUG_XPI")
+            FBTEST_XPI = test_bot.get(section, "FBTEST_XPI")
+        
+            # Download the extensions
+            self.log.debug("Firebug XPI: " + FIREBUG_XPI)
+            relPath = getRelativeURL(FIREBUG_XPI)
+            savePath = os.path.join(self.repo, relPath)
+            utils.download(FIREBUG_XPI, savePath)
 
-            # Update or create the svn test repository
-            if not os.path.isdir(os.path.join(opt.repo, ".svn")):
-                os.system("svn co http://fbug.googlecode.com/svn/tests/ " + os.path.join(opt.repo, SVN_REVISION, "tests") + " -r " + SVN_REVISION)
-            else:
-                subprocess.Popen(os.path.join(opt.repo, "svn") + " update -r "
-                        + SVN_REVISION, shell=True).wait()
+            self.log.debug("FBTest XPI: " + FBTEST_XPI)
+            relPath = getRelativeURL(FBTEST_XPI)
+            savePath = os.path.join(self.repo, relPath)
+            utils.download(FBTEST_XPI, savePath)
+        
+            # Localize extensions for the server
+            relPath = getRelativeURL(FIREBUG_XPI)
+            FIREBUG_XPI = "http://" + ip + "/" + relPath
+            test_bot.set(section, "FIREBUG_XPI", FIREBUG_XPI)
 
-            mytag = SVN_REVISION
+            relPath = getRelativeURL(FBTEST_XPI)
+            FBTEST_XPI = "http://" + ip + "/" + relPath
+            test_bot.set(section, "FBTEST_XPI", FBTEST_XPI)
 
-        # Localize testlist for the server
-        testlist = test_bot.get(section, "TEST_LIST")
-        relPath = getRelativeURL(testlist)
-        testlist = "http://" + ip + "/" + mytag + "/" + relPath
-        test_bot.set(section, "TEST_LIST", testlist)
 
-        FIREBUG_XPI = test_bot.get(section, "FIREBUG_XPI")
-        FBTEST_XPI = test_bot.get(section, "FBTEST_XPI")
+        with open(os.path.join(self.repo, configDir), 'wb') as configfile:
+            test_bot.write(configfile)
 
-        # Download the extensions
-        print FIREBUG_XPI
-        relPath = getRelativeURL(FIREBUG_XPI)
-        savePath = os.path.join(opt.repo, relPath)
-        utils.download(FIREBUG_XPI, savePath)
-
-        print FBTEST_XPI
-        relPath = getRelativeURL(FBTEST_XPI)
-        savePath = os.path.join(opt.repo, relPath)
-        utils.download(FBTEST_XPI, savePath)
-
-        # Localize extensions for the server
-        relPath = getRelativeURL(FIREBUG_XPI)
-        FIREBUG_XPI = "http://" + ip + "/" + relPath
-        test_bot.set(section, "FIREBUG_XPI", FIREBUG_XPI)
-
-        relPath = getRelativeURL(FBTEST_XPI)
-        FBTEST_XPI = "http://" + ip + "/" + relPath
-        test_bot.set(section, "FBTEST_XPI", FBTEST_XPI)
-
-    with open(os.path.join(opt.repo, configDir), 'wb') as configfile:
-        test_bot.write(configfile)
-
-    # Copy the files to the webserver document root (shutil.copytree won't work, settle for this)
-    recursivecopy(opt.repo, opt.serverpath)
-    if not isSVN:
-        # Then you have a copy of the git repo in opt.serverpath/firebug directory
-        # we'll remove that to reduce confusion.
-        shutil.rmtree(os.path.join(opt.serverpath, "firebug"))
+        # Copy the files to the webserver document root (shutil.copytree won't work, settle for this)
+        recursivecopy(self.repo, self.serverpath)
+        if not isSVN:
+            # Then you have a copy of the git repo in self.serverpath/firebug directory
+            # we'll remove that to reduce confusion.
+            shutil.rmtree(os.path.join(self.serverpath, "firebug"))
 
 def main(argv):
     # Parse command line
@@ -176,22 +181,31 @@ def main(argv):
     parser.add_option("-i", "--interval", dest="waitTime",
                       help="The number of hours to wait between checking for updates")
 
-    (opt, remainder) = parser.parse_args(argv)
+    parser.add_option("--debug", dest="debug",
+                      action="store_true",
+                      help="Enables debug logging")
 
+    (opt, remainder) = parser.parse_args(argv)
+    
     if not os.path.exists(opt.repo):
         os.mkdir(opt.repo)
 
+
+    updater = FBUpdater(repo=opt.repo, serverpath=opt.serverpath, debug=opt.debug)
+    log = mozlog.getLogger("FB_UPDATE")
+
     while (1):
-        print "[INFO] Updating server extensions and tests"
         try:
-            update(opt)
+            updater.update()
         except Exception as e:
-            print "[Error] Could not update the server files: " + str(e)
+            log.error("Could not update the server files")
+            log.error(traceback.format_exc())
         if opt.waitTime != None:
-            print "[INFO] Sleeping for " + str(opt.waitTime) + " hour" + ("s" if int(opt.waitTime) > 1 else "")
+            log.info("Sleeping for " + str(opt.waitTime) + " hour" + ("s" if int(opt.waitTime) > 1 else ""))
             sleep(int(opt.waitTime) * 3600)
         else:
             break;
+    mozlog.shutdown()
 
 
 if __name__ == '__main__':

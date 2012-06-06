@@ -209,7 +209,8 @@ class FBRunner:
         self.log.info("Starting Firebug Tests")
         try:
             self.log.debug("Creating Firefox profile and installing extensions")
-            mozProfile = FirefoxProfile(profile=self.profile, addons=["firebug.xpi", "fbtest.xpi"])
+            prefs = {"extensions.update.enabled" : "false"}
+            mozProfile = FirefoxProfile(profile=self.profile, addons=["firebug.xpi", "fbtest.xpi"], preferences=prefs)
             self.profile = mozProfile.profile
             
             self.log.debug("Creating Firefox runner")
