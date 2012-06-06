@@ -92,75 +92,85 @@ class FBUpdater:
         ip = dummy.getsockname()[0]
 
         # Grab the test_bot.config file
-        utils.download("http://getfirebug.com/" + CONFIG_LOCATION, os.path.join(self.repo, CONFIG_LOCATION))
+        utils.download("http://getfirebug.com/" + self.CONFIG_LOCATION, os.path.join(self.repo, "test-bot.config"))
         # Parse the config file
         test_bot = ConfigParser()
-        test_bot.read(os.path.join(self.repo, CONFIG_LOCATION))
-        isSVN = True
+        test_bot.read(os.path.join(self.repo, "test-bot.config"))
 
+        copyConfig = False
         # For each section in config file, download specified files and move to webserver
         for section in test_bot.sections():
             # Get information from config file
-            if not (test_bot.has_option(section, "GIT_TAG") or test_bot.has_option(section, "GIT_BRANCH")):
-                self.log.error("GIT_TAG and GIT_BRANCH must be specified for '" + section "'")
+            if not (test_bot.has_option(section, "GIT_TAG") and test_bot.has_option(section, "GIT_BRANCH")):
+                self.log.error("GIT_TAG and GIT_BRANCH must be specified for '" + section + "'")
                 continue
-
-            GIT_TAG = test_bot.get(section, "GIT_TAG")
+            copyConfig = True
+            
             GIT_BRANCH = test_bot.get(section, "GIT_BRANCH")
+            GIT_TAG = test_bot.get(section, "GIT_TAG")
 
             #Ensure we have a git repo to work with
             fbugsrc = os.path.join(self.repo, "firebug")
             if not os.path.isdir(fbugsrc):
-                subprocess.Popen(["git","clone", FIREBUG_REPO, fbugsrc]).communicate()
+                self.log.debug("git clone " + self.FIREBUG_REPO + " " + fbugsrc)
+                subprocess.Popen(["git","clone", self.FIREBUG_REPO, fbugsrc]).communicate()
 
             # Create the branch in case it doesn't exist. If it does git will
             # spit out an error message which we can ignore
+            self.log.debug("git branch " + GIT_BRANCH + " origin/" + GIT_BRANCH)
             subprocess.Popen(["git","branch",GIT_BRANCH,"origin/"+GIT_BRANCH],
                     cwd=fbugsrc).communicate()
 
             # Because we may have added new tags we need to pull before we find
             # our specific revision
+            self.log.debug("git checkout " + GIT_BRANCH)
             subprocess.Popen(["git","checkout",GIT_BRANCH], cwd=fbugsrc).communicate()
+            self.log.debug("git pull origin " + GIT_BRANCH)
             subprocess.Popen(["git", "pull" , "origin", GIT_BRANCH],
                     cwd=fbugsrc).communicate()
 
             # Check out the tag for the git repo - this assumes we always work
             # off tags, branches or specific commit hashes.
+            self.log.debug("git checkout " + GIT_TAG)
             subprocess.Popen(["git", "checkout", GIT_TAG], cwd=fbugsrc).communicate()
 
+            # If using HEAD as a tag we need the actual changeset
+            if GIT_TAG.upper() == "HEAD":
+                GIT_TAG = subprocess.Popen(["git", "rev-parse", GIT_TAG],
+                            cwd=fbugsrc, stdout=subprocess.PIPE).communicate()[0].strip()
+
             # Copy this to the serverpath
-            recursivecopy(fbugsrc, os.path.join(self.serverpath, GIT_TAG))
+            self.recursivecopy(fbugsrc, os.path.join(self.serverpath, GIT_TAG))
         
             # Localize testlist for the server
-            testlist = "http://" + ip + "/" + GIT_TAG + "/" + TESTLIST_LOCATION
+            testlist = "http://" + ip + "/" + GIT_TAG + "/" + self.TESTLIST_LOCATION
             test_bot.set(section, "TEST_LIST", testlist)
 
             FIREBUG_XPI = test_bot.get(section, "FIREBUG_XPI")
             FBTEST_XPI = test_bot.get(section, "FBTEST_XPI")
         
             # Download the extensions
-            self.log.debug("Firebug XPI: " + FIREBUG_XPI)
-            relPath = getRelativeURL(FIREBUG_XPI)
-            savePath = os.path.join(self.repo, relPath)
+            firebugPath = self.getRelativeURL(FIREBUG_XPI)
+            savePath = os.path.join(self.serverpath, firebugPath)
+            self.log.debug("Downloading Firebug XPI '" + FIREBUG_XPI + "' to '" + savePath + "'")
             utils.download(FIREBUG_XPI, savePath)
 
-            self.log.debug("FBTest XPI: " + FBTEST_XPI)
-            relPath = getRelativeURL(FBTEST_XPI)
-            savePath = os.path.join(self.repo, relPath)
+            fbtestPath = self.getRelativeURL(FBTEST_XPI)
+            savePath = os.path.join(self.serverpath, fbtestPath)
+            self.log.debug("Downloading FBTest XPI '" + FBTEST_XPI + "' to '" + savePath + "'")
             utils.download(FBTEST_XPI, savePath)
         
             # Localize extensions for the server
-            relPath = getRelativeURL(FIREBUG_XPI)
-            FIREBUG_XPI = "http://" + ip + "/" + relPath
+            FIREBUG_XPI = "http://" + ip + "/" + firebugPath
             test_bot.set(section, "FIREBUG_XPI", FIREBUG_XPI)
 
-            relPath = getRelativeURL(FBTEST_XPI)
-            FBTEST_XPI = "http://" + ip + "/" + relPath
+            FBTEST_XPI = "http://" + ip + "/" + fbtestPath
             test_bot.set(section, "FBTEST_XPI", FBTEST_XPI)
 
-        # Write the complete config file
-        with open(os.path.join(self.serverpath, CONFIG_LOCATION), 'wb') as configfile:
-            test_bot.write(configfile)
+        if copyConfig:
+            # Write the complete config file
+            with open(os.path.join(self.serverpath, self.CONFIG_LOCATION), 'wb') as configfile:
+                test_bot.write(configfile)
 
 def main(argv):
     # Parse command line
@@ -193,7 +203,6 @@ def main(argv):
         try:
             updater.update()
         except Exception as e:
-            log.error("Could not update the server files")
             log.error(traceback.format_exc())
         if opt.waitTime != None:
             log.info("Sleeping for " + str(opt.waitTime) + " hour" + ("s" if int(opt.waitTime) > 1 else ""))
