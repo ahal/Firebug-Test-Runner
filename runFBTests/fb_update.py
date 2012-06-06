@@ -98,6 +98,7 @@ class FBUpdater:
         test_bot.read(os.path.join(self.repo, "test-bot.config"))
 
         copyConfig = False
+        tags = []
         # For each section in config file, download specified files and move to webserver
         for section in test_bot.sections():
             # Get information from config file
@@ -139,6 +140,8 @@ class FBUpdater:
                 GIT_TAG = subprocess.Popen(["git", "rev-parse", GIT_TAG],
                             cwd=fbugsrc, stdout=subprocess.PIPE).communicate()[0].strip()
 
+            tags.append(GIT_TAG)
+
             # Copy this to the serverpath
             self.recursivecopy(fbugsrc, os.path.join(self.serverpath, GIT_TAG))
         
@@ -171,6 +174,13 @@ class FBUpdater:
             # Write the complete config file
             with open(os.path.join(self.serverpath, self.CONFIG_LOCATION), 'wb') as configfile:
                 test_bot.write(configfile)
+
+        # Remove old revisions to save space
+        tags.append("releases")
+        for name in os.listdir(self.serverpath):
+            if name not in tags and os.path.isdir(os.path.join(self.serverpath, name)):
+                self.log.debug("Deleting unused changeset: " + os.path.join(self.serverpath, name))
+                shutil.rmtree(os.path.join(self.serverpath, name))
 
 def main(argv):
     # Parse command line
