@@ -54,7 +54,7 @@ import mozlog
 import traceback
 
 class FBUpdater:
-    FIREBUG_REPO = "https://github.com/firebug/firebug.git"
+    FIREBUG_REPO = "git://github.com/firebug/firebug.git"
     TESTLIST_LOCATION = "tests/content/firebug.html"
     CONFIG_LOCATION = "releases/firebug/test-bot.config"
 
