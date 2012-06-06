@@ -230,6 +230,7 @@ class FBWrapper:
                 raise
             
             if not self.waitTime:
+                mozlog.shutdown()
                 break;
             
             # Wait for specified number of hours

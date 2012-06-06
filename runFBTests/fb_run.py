@@ -112,7 +112,6 @@ class FBRunner:
                 if os.path.exists(tmpFile):
                     self.log.debug("Removing " + tmpFile)
                     os.remove(tmpFile)
-            mozlog.shutdown()
         except Exception, e:
             self.log.warn("Could not clean up temporary files")
             self.log.warn(traceback.format_exc())
