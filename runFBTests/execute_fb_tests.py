@@ -102,6 +102,7 @@ class FBWrapper:
             buildpath = os.path.join(buildpath, 'Contents', 'MacOS')
         # Find new changeset
         new_changeset = utils.get_changeset(buildpath)
+        self.log.debug("Changeset for '" + buildpath + "': " + new_changeset)
         if not (version, build) in self.changeset:
             self.changeset[(version, build)] = -1
         if self.changeset[(version, build)] != new_changeset:
