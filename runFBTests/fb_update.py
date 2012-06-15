@@ -106,7 +106,7 @@ class FBUpdater:
                 self.log.error("GIT_TAG and GIT_BRANCH must be specified for '" + section + "'")
                 continue
             copyConfig = True
-            
+
             GIT_BRANCH = test_bot.get(section, "GIT_BRANCH")
             GIT_TAG = test_bot.get(section, "GIT_TAG")
 
@@ -144,14 +144,14 @@ class FBUpdater:
 
             # Copy this to the serverpath
             self.recursivecopy(fbugsrc, os.path.join(self.serverpath, GIT_TAG))
-        
+
             # Localize testlist for the server
             testlist = "http://" + ip + "/" + GIT_TAG + "/" + self.TESTLIST_LOCATION
             test_bot.set(section, "TEST_LIST", testlist)
 
             FIREBUG_XPI = test_bot.get(section, "FIREBUG_XPI")
             FBTEST_XPI = test_bot.get(section, "FBTEST_XPI")
-        
+
             # Download the extensions
             firebugPath = self.getRelativeURL(FIREBUG_XPI)
             savePath = os.path.join(self.serverpath, firebugPath)
@@ -162,7 +162,7 @@ class FBUpdater:
             savePath = os.path.join(self.serverpath, fbtestPath)
             self.log.debug("Downloading FBTest XPI '" + FBTEST_XPI + "' to '" + savePath + "'")
             utils.download(FBTEST_XPI, savePath)
-        
+
             # Localize extensions for the server
             FIREBUG_XPI = "http://" + ip + "/" + firebugPath
             test_bot.set(section, "FIREBUG_XPI", FIREBUG_XPI)
@@ -176,7 +176,7 @@ class FBUpdater:
                 test_bot.write(configfile)
 
         # Remove old revisions to save space
-        tags.append("releases")
+        tags.extend(["releases", "tests"])
         for name in os.listdir(self.serverpath):
             if name not in tags and os.path.isdir(os.path.join(self.serverpath, name)):
                 self.log.debug("Deleting unused changeset: " + os.path.join(self.serverpath, name))
@@ -201,7 +201,7 @@ def main(argv):
                       help="Enables debug logging")
 
     (opt, remainder) = parser.parse_args(argv)
-    
+
     if not os.path.exists(opt.repo):
         os.mkdir(opt.repo)
 
