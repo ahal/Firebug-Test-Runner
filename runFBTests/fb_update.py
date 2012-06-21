@@ -39,19 +39,18 @@
 # This script will grab all of the latest firebug releases, as well as
 # the fbtests and testlists and store them on the local webserver
 from ConfigParser import ConfigParser
-from time import sleep
 import fb_utils as utils
-import fileinput
+import mozlog
 import os, sys
-import subprocess
-import shutil
 import optparse
+import platform
+import shutil
+import socket
+import subprocess
+import time
+import traceback
 import urllib2
 import urlparse
-import socket
-import platform
-import mozlog
-import traceback
 
 class FBUpdater:
     FIREBUG_REPO = "git://github.com/firebug/firebug.git"
@@ -179,8 +178,12 @@ class FBUpdater:
         tags.extend(["releases", "tests"])
         for name in os.listdir(self.serverpath):
             if name not in tags and os.path.isdir(os.path.join(self.serverpath, name)):
-                self.log.debug("Deleting unused changeset: " + os.path.join(self.serverpath, name))
-                shutil.rmtree(os.path.join(self.serverpath, name))
+                # only remove if it is more than a day old
+                # this is so we don't delete files that are currently being used in the middle of a test run
+                mtime = os.path.getmtime(name)
+                if time.time() - mtime > 24 * 60 * 60: # number of seconds in a day
+                    self.log.debug("Deleting unused changeset: " + os.path.join(self.serverpath, name))
+                    shutil.rmtree(os.path.join(self.serverpath, name))
 
 def main(argv):
     # Parse command line
@@ -216,7 +219,7 @@ def main(argv):
             log.error(traceback.format_exc())
         if opt.waitTime != None:
             log.info("Sleeping for " + str(opt.waitTime) + " hour" + ("s" if int(opt.waitTime) > 1 else ""))
-            sleep(int(opt.waitTime) * 3600)
+            time.sleep(int(opt.waitTime) * 3600)
         else:
             break;
     mozlog.shutdown()
