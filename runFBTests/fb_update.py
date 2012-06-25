@@ -145,7 +145,7 @@ class FBUpdater:
             testlist = "http://" + ip + "/" + GIT_TAG + "/" + self.TESTLIST_LOCATION
             test_bot.set(section, "TEST_LIST", testlist)
 
-            if test_bot.has_option(section, "FIREBUG_XPI"):
+            if test_bot.has_option(section, "FIREBUG_XPI") and False:
                 FIREBUG_XPI = test_bot.get(section, "FIREBUG_XPI")
                 # Download the extensions
                 firebugPath = self.getRelativeURL(FIREBUG_XPI)
@@ -155,16 +155,18 @@ class FBUpdater:
             else:
                 # build the extension from the source
                 # requires java and ant on the webserver
+                self.log.debug("Building Firebug extension from source")
                 cmd = ['ant']
+                self.log.debug('ant')
                 subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                                 cwd=os.path.join(fbugsrc, "extension")).communicate()
-                ext = os.path.join("extension", "release")
+                                 cwd=os.path.join(fbugsrc, 'extension')).communicate()
+                ext = os.path.join('extension', 'release')
                 firebugPath = os.path.join(GIT_TAG, ext,
                                 [f for f in os.listdir(os.path.join(fbugsrc, ext))
-                                if f[:7] == "firebug" if f.find("amo") == -1 if f[-4:] == ".xpi"][0])
+                                if f.startswith('firebug') if f.find('amo') == -1 if f.endswith('.xpi')][0])
 
-            if test_bot.has_option(section, "FBTEST_XPI"):
-                FBTEST_XPI = test_bot.get(section, "FBTEST_XPI")
+            if test_bot.has_option(section, 'FBTEST_XPI') and False:
+                FBTEST_XPI = test_bot.get(section, 'FBTEST_XPI')
                 fbtestPath = self.getRelativeURL(FBTEST_XPI)
                 savePath = os.path.join(self.serverpath, fbtestPath)
                 self.log.debug("Downloading FBTest XPI '" + FBTEST_XPI + "' to '" + savePath + "'")
@@ -172,13 +174,15 @@ class FBUpdater:
             else:
                 # build the extension from the source
                 # requires java and ant on the webserver
+                self.log.debug("Building FBTest extension from source")
                 cmd = ['ant']
+                self.log.debug('ant')
                 subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                                 cwd=os.path.join(fbugsrc, "tests", "FBTest")).communicate()
-                ext = os.path.join("tests", "FBTest", "release",
+                                 cwd=os.path.join(fbugsrc, 'tests', 'FBTest')).communicate()
+                ext = os.path.join('tests', 'FBTest', 'release')
                 fbtestPath = os.path.join(GIT_TAG, ext,
                                 [f for f in os.listdir(os.path.join(fbugsrc, ext))
-                                if f[:6] == "fbtest" if f[-4:] == ".xpi"][0])
+                                if f.startswith('fbTest') if f.endswith('.xpi')][0])
 
             # Localize extensions for the server
             FIREBUG_XPI = "http://" + ip + "/" + firebugPath
@@ -192,13 +196,12 @@ class FBUpdater:
 
         if copyConfig:
             # Write the complete config file
+            saveloc = os.path.join(self.serverpath, os.path.dirname(self.CONFIG_LOCATION))
+            if not os.path.exists(saveloc):
+                os.makedirs(saveloc)
             with open(os.path.join(self.serverpath, self.CONFIG_LOCATION), 'wb') as configfile:
                 test_bot.write(configfile)
 
-        self._cleanup(tags)
-
-
-    def _cleanup(self, tags=[]):
         # Remove old revisions to save space
         tags.extend(["releases", "tests"])
         for name in os.listdir(self.serverpath):
