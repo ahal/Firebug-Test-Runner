@@ -141,26 +141,48 @@ class FBUpdater:
 
             tags.append(GIT_TAG)
 
-            # Copy this to the serverpath
-            self.recursivecopy(fbugsrc, os.path.join(self.serverpath, GIT_TAG))
-
             # Localize testlist for the server
             testlist = "http://" + ip + "/" + GIT_TAG + "/" + self.TESTLIST_LOCATION
             test_bot.set(section, "TEST_LIST", testlist)
 
-            FIREBUG_XPI = test_bot.get(section, "FIREBUG_XPI")
-            FBTEST_XPI = test_bot.get(section, "FBTEST_XPI")
+            if test_bot.has_option(section, "FIREBUG_XPI"):
+                FIREBUG_XPI = test_bot.get(section, "FIREBUG_XPI")
+                # Download the extensions
+                firebugPath = self.getRelativeURL(FIREBUG_XPI)
+                savePath = os.path.join(self.serverpath, firebugPath)
+                self.log.debug("Downloading Firebug XPI '" + FIREBUG_XPI + "' to '" + savePath + "'")
+                utils.download(FIREBUG_XPI, savePath)
+            else:
+                # build the extension from the source
+                # requires java and ant on the webserver
+                self.log.debug("Building Firebug extension from source")
+                cmd = ['ant']
+                self.log.debug('ant')
+                subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                                 cwd=os.path.join(fbugsrc, 'extension')).communicate()
+                ext = os.path.join('extension', 'release')
+                firebugPath = os.path.join(GIT_TAG, ext,
+                                [f for f in os.listdir(os.path.join(fbugsrc, ext))
+                                if f.startswith('firebug') if f.find('amo') == -1 if f.endswith('.xpi')][0])
 
-            # Download the extensions
-            firebugPath = self.getRelativeURL(FIREBUG_XPI)
-            savePath = os.path.join(self.serverpath, firebugPath)
-            self.log.debug("Downloading Firebug XPI '" + FIREBUG_XPI + "' to '" + savePath + "'")
-            utils.download(FIREBUG_XPI, savePath)
-
-            fbtestPath = self.getRelativeURL(FBTEST_XPI)
-            savePath = os.path.join(self.serverpath, fbtestPath)
-            self.log.debug("Downloading FBTest XPI '" + FBTEST_XPI + "' to '" + savePath + "'")
-            utils.download(FBTEST_XPI, savePath)
+            if test_bot.has_option(section, 'FBTEST_XPI'):
+                FBTEST_XPI = test_bot.get(section, 'FBTEST_XPI')
+                fbtestPath = self.getRelativeURL(FBTEST_XPI)
+                savePath = os.path.join(self.serverpath, fbtestPath)
+                self.log.debug("Downloading FBTest XPI '" + FBTEST_XPI + "' to '" + savePath + "'")
+                utils.download(FBTEST_XPI, savePath)
+            else:
+                # build the extension from the source
+                # requires java and ant on the webserver
+                self.log.debug("Building FBTest extension from source")
+                cmd = ['ant']
+                self.log.debug('ant')
+                subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                                 cwd=os.path.join(fbugsrc, 'tests', 'FBTest')).communicate()
+                ext = os.path.join('tests', 'FBTest', 'release')
+                fbtestPath = os.path.join(GIT_TAG, ext,
+                                [f for f in os.listdir(os.path.join(fbugsrc, ext))
+                                if f.startswith('fbTest') if f.endswith('.xpi')][0])
 
             # Localize extensions for the server
             FIREBUG_XPI = "http://" + ip + "/" + firebugPath
@@ -169,21 +191,28 @@ class FBUpdater:
             FBTEST_XPI = "http://" + ip + "/" + fbtestPath
             test_bot.set(section, "FBTEST_XPI", FBTEST_XPI)
 
+            # Copy this to the serverpath
+            self.recursivecopy(fbugsrc, os.path.join(self.serverpath, GIT_TAG))
+
         if copyConfig:
             # Write the complete config file
+            saveloc = os.path.join(self.serverpath, os.path.dirname(self.CONFIG_LOCATION))
+            if not os.path.exists(saveloc):
+                os.makedirs(saveloc)
             with open(os.path.join(self.serverpath, self.CONFIG_LOCATION), 'wb') as configfile:
                 test_bot.write(configfile)
 
         # Remove old revisions to save space
         tags.extend(["releases", "tests"])
         for name in os.listdir(self.serverpath):
-            if name not in tags and os.path.isdir(os.path.join(self.serverpath, name)):
+            path = os.path.join(self.serverpath, name)
+            if name not in tags and os.path.isdir(path):
                 # only remove if it is more than a day old
                 # this is so we don't delete files that are currently being used in the middle of a test run
-                mtime = os.path.getmtime(name)
+                mtime = os.path.getmtime(path)
                 if time.time() - mtime > 24 * 60 * 60: # number of seconds in a day
-                    self.log.debug("Deleting unused changeset: " + os.path.join(self.serverpath, name))
-                    shutil.rmtree(os.path.join(self.serverpath, name))
+                    self.log.debug("Deleting unused changeset: " + path)
+                    shutil.rmtree(path)
 
 def main(argv):
     # Parse command line
