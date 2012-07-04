@@ -48,12 +48,20 @@ import traceback
 import os, sys, platform
 
 class FBRunner:
+    REMOTE_CONFIG = "releases/firebug/test-bot.config"
+    LOCAL_CONFIG = "fb-test-runner.config"
+
+    # Because the only communication between this script and the FBTest console is the
+    # log file, we don't know whether there was a crash or the test is just taking awhile.
+    # Make 1 minute the timeout for tests.
+    TEST_TIMEOUT = 60
+
     def __init__(self, **kwargs):
         # Set up the log file or use stdout if none specified
         self.log = mozlog.getLogger('FIREBUG', kwargs.get('log'))
         self.log.setLevel(mozlog.DEBUG if kwargs.get('debug') else mozlog.INFO)
 
-        # Initialization  
+        # Initialization
         self.binary = kwargs.get('binary')
         self.profile = kwargs.get('profile')
         self.serverpath = kwargs.get('serverpath')
@@ -62,19 +70,13 @@ class FBRunner:
         self.couchURI = kwargs.get('couchURI')
         self.databasename = kwargs.get('databasename')
         self.platform = platform.system().lower()
-        
-        # Because the only communication between this script and the FBTest console is the
-        # log file, we don't know whether there was a crash or the test is just taking awhile.
-        # Make 1 minute the timeout for tests.
-        self.TEST_TIMEOUT = 60        
-       
-        
+
         # Read in fb-test-runner.config for local configuration
         localConfig = ConfigParser()
-        localConfig.read("fb-test-runner.config")
+        localConfig.read(self.LOCAL_CONFIG)
         if not self.serverpath:
             self.serverpath = localConfig.get("runner_args", "server")
-        
+
         # Ensure serverpath has correct format
         self.serverpath = self.serverpath.rstrip("/") + "/"
 
@@ -88,20 +90,31 @@ class FBRunner:
             except NoOptionError:
                 self.version = localConfig.get("version_map", "default")
                 self.log.warning("Could not find an appropriate version of Firebug to use, using Firebug " + self.version)
+        self.section = "Firebug" + self.version
 
         # Read in the Firebug team's config file
         try:
-            self.download(self.serverpath + "releases/firebug/test-bot.config", "test-bot.config")
+            self.download(self.serverpath + self.REMOTE_CONFIG, "test-bot.config")
         except urllib2.URLError:
-            self.log.error("Could not download test-bot.config, check that '" + self.serverpath + "releases/firebug/test-bot.config' is valid")
+            self.log.error("Could not download test-bot.config, check that '" + self.serverpath + self.REMOTE_CONFIG + "' is valid")
             self.log.error(traceback.format_exc())
             raise
         self.config = ConfigParser()
         self.config.read("test-bot.config")
-        
+
         # Make sure we have a testlist
         if not self.testlist:
-            self.testlist = self.config.get("Firebug"+self.version, "TEST_LIST")
+            try:
+                self.testlist = self.config.get(self.section, "TEST_LIST")
+            except Exception, e:
+                self.log.error("No testlist specified in config file")
+                raise
+
+        if self.config.has_option(self.section, "DB_NAME"):
+            self.databasename = self.config.get(self.section, "DB_NAME")
+
+        if self.config.has_option(self.section, "DB_URL"):
+            self.couchURI = self.config.get(self.section, "DB_URL")
 
     def cleanup(self):
         """
@@ -115,7 +128,7 @@ class FBRunner:
         except Exception, e:
             self.log.warn("Could not clean up temporary files")
             self.log.warn(traceback.format_exc())
-            
+
     def download(self, url, savepath):
         """
         Save the file located at 'url' into 'filename'
@@ -142,16 +155,16 @@ class FBRunner:
             ver = app.get("App", "Version").rstrip("0123456789pre")    # Version should be of the form '3.6' or '4.0b' and not the whole string
             ver = ver[:-1] if ver[-1]=="." else ver
         return appdir, ver
-        
-        
+
+
     def get_extensions(self):
         """
         Downloads the firebug and fbtest extensions
         for the specified Firebug version
         """
         self.log.debug("Downloading firebug and fbtest extensions from server")
-        FIREBUG_XPI = self.config.get("Firebug" + self.version, "FIREBUG_XPI")
-        FBTEST_XPI = self.config.get("Firebug" + self.version, "FBTEST_XPI")
+        FIREBUG_XPI = self.config.get(self.section, "FIREBUG_XPI")
+        FBTEST_XPI = self.config.get(self.section, "FBTEST_XPI")
         self.download(FIREBUG_XPI, "firebug.xpi")
         self.download(FBTEST_XPI, "fbtest.xpi")
 
@@ -185,10 +198,10 @@ class FBRunner:
                     for name in os.listdir(os.path.join(self.profile, "firebug", "fbtest", "logs")):
                         os.rename(os.path.join(self.profile, "firebug", "fbtest", "logs", name), os.path.join(self.profile, "firebug", "fbtest", "logs_old", name))
 
-        # Grab the extensions from server   
+        # Grab the extensions from server
         try:
             self.get_extensions()
-        except (NoSectionError, NoOptionError), e:            
+        except (NoSectionError, NoOptionError), e:
             self.log.error("Extensions could not be downloaded, malformed test-bot.config")
             self.log.error(traceback.format_exc())
             self.cleanup()
@@ -198,7 +211,7 @@ class FBRunner:
             self.log.error(traceback.format_exc())
             self.cleanup()
             raise
-    
+
         # Create environment variables
         mozEnv = os.environ
         mozEnv["XPC_DEBUG_WARN"] = "warn"                # Suppresses certain alert warnings that may sometimes appear
@@ -211,16 +224,16 @@ class FBRunner:
             prefs = {"extensions.update.enabled" : "false"}
             mozProfile = FirefoxProfile(profile=self.profile, addons=["firebug.xpi", "fbtest.xpi"], preferences=prefs)
             self.profile = mozProfile.profile
-            
+
             self.log.debug("Creating Firefox runner")
             mozRunner = FirefoxRunner(profile=mozProfile, binary=self.binary, cmdargs=["-no-remote", "-runFBTests", self.testlist], env=mozEnv)
             self.binary = mozRunner.binary
             if not self.appVersion:
                 self.appdir, self.appVersion = self.get_app_info()
-           
+
              # Disable the compatibility check on startup
             self.disable_compatibility_check()
-            
+
             self.log.debug("Running '" + self.binary + " -no-remote -runFBTests " + self.testlist + "'")
             mozRunner.start()
         except Exception, e:
@@ -239,7 +252,7 @@ class FBRunner:
             except Exception:
                 timeout += 1
                 sleep(1)
-                
+
         # If log file was not found
         if not logfile:
             self.log.error("Could not find the log file in '" + self.profile + "'")
@@ -280,12 +293,12 @@ class FBRunner:
                 logfile.write(msg)       # Print out crash message with offending test
                 self.log.warn("Possible crash detected - test run aborted")
 
-        # Give last two lines of file a chance to write and send log file to fb_logs  
+        # Give last two lines of file a chance to write and send log file to fb_logs
         sleep(1)
         filename = logfile.name
         logfile.close()
 
-        # Send log file to couchdb    
+        # Send log file to couchdb
         self.log.info("Sending log file to couchdb at '" + self.couchURI + "'")
         try:
             fb_logs.main(["--log", filename, "--database", self.databasename, "--couch", self.couchURI,
@@ -293,7 +306,7 @@ class FBRunner:
         except Exception, e:
             self.log.error("Log file not sent to couchdb at server: '" + self.couchURI + "' and database: '" + self.databasename)
             self.log.error(traceback.format_exc())
-        
+
         # Cleanup
         mozRunner.stop()
         self.log.debug("Exiting - Status successful")
@@ -305,37 +318,37 @@ def cli(argv=sys.argv[1:]):
     parser = OptionParser("usage: %prog [options]")
     parser.add_option("--appname", dest="binary",
                       help="Firefox binary path")
-                    
+
     parser.add_option("--profile-path", dest="profile",
                       help="The profile to use when running Firefox")
-                        
-    parser.add_option("-s", "--serverpath", dest="serverpath", 
+
+    parser.add_option("-s", "--serverpath", dest="serverpath",
                       help="The http server containing the Firebug tests")
-                        
+
     parser.add_option("-v", "--version", dest="version",
                       help="The firebug version to run")
-                        
+
     parser.add_option("-t", "--testlist", dest="testlist",
                       help="Name of the testlist to use, should usually use the default")
 
     parser.add_option("-c", "--couch", dest="couchURI",
                       default="http://localhost:5984",
                       help="URI to couchdb server for log information")
-                        
+
     parser.add_option("-d", "--database", dest="databasename",
                       default="firebug",
                       help="Database name to keep log information")
-                      
+
     parser.add_option("--log", dest="log",
                       help="Path to the log file (default is stdout)")
-                      
+
     parser.add_option("--debug", dest="debug",
                       action="store_true",
                       help="Enable debug logging")
     (opt, remainder) = parser.parse_args(argv)
-    
+
     try:
-        runner = FBRunner(binary=opt.binary, profile=opt.profile, serverpath=opt.serverpath, 
+        runner = FBRunner(binary=opt.binary, profile=opt.profile, serverpath=opt.serverpath,
                                     version=opt.version, testlist=opt.testlist, log=opt.log, debug=opt.debug)
         runner.run()
     except Exception:
