@@ -65,6 +65,10 @@ class FBUpdater:
         self.repo = kwargs.get('repo')
         self.serverpath = kwargs.get('serverpath')
 
+    def _run_cmd(self, args, cwd=None, stdout=None):
+        self.log.debug(" ".join(args))
+        return subprocess.Popen(args, cwd=cwd, stdout=stdout).communicate()[0]
+
     def getRelativeURL(self, url):
         return urlparse.urlsplit(url).path.lstrip('/')
 
@@ -73,14 +77,11 @@ class FBUpdater:
             os.makedirs(dest)
 
         # Copy the files to the webserver document root (shutil.copytree won't work, settle for this)
+        self.log.debug("Copying '%s' to '%s'" % (os.path.join(src, "*"), dest))
         if platform.system().lower() == "windows":
-            subprocess.Popen("xcopy " + os.path.join(src, "*") + " " + dest + "/E",
-                    shell=True).wait()
-            self.log.debug("xcopy " + os.path.join(src, "*") + " " + dest + "/E")
+            subprocess.Popen("xcopy "+os.path.join(src, "*")+" "+dest+" /E", shell=True).wait()
         else:
-            subprocess.Popen("cp -r " + os.path.join(src, "*") + " " + dest,
-                    shell=True).wait()
-            self.log.debug("cp -r " + os.path.join(src, "*") + " " + dest)
+            subprocess.Popen("cp -r "+os.path.join(src, '*')+" "+dest, shell=True).wait()
 
     def update(self):
         self.log.info("Updating server extensions and tests")
@@ -91,7 +92,7 @@ class FBUpdater:
         ip = dummy.getsockname()[0]
 
         # Grab the test_bot.config file
-        utils.download("http://getfirebug.com/" + self.CONFIG_LOCATION, os.path.join(self.repo, "test-bot.config"))
+        utils.download("http://getfirebug.com/%s" % self.CONFIG_LOCATION, os.path.join(self.repo, "test-bot.config"))
         # Parse the config file
         test_bot = ConfigParser()
         test_bot.read(os.path.join(self.repo, "test-bot.config"))
@@ -102,7 +103,7 @@ class FBUpdater:
         for section in test_bot.sections():
             # Get information from config file
             if not (test_bot.has_option(section, "GIT_TAG") and test_bot.has_option(section, "GIT_BRANCH")):
-                self.log.error("GIT_TAG and GIT_BRANCH must be specified for '" + section + "'")
+                self.log.error("GIT_TAG and GIT_BRANCH must be specified for '%s'" % section)
                 continue
             copyConfig = True
 
@@ -112,83 +113,71 @@ class FBUpdater:
             #Ensure we have a git repo to work with
             fbugsrc = os.path.join(self.repo, "firebug")
             if not os.path.isdir(fbugsrc):
-                self.log.debug("git clone " + self.FIREBUG_REPO + " " + fbugsrc)
-                subprocess.Popen(["git","clone", self.FIREBUG_REPO, fbugsrc]).communicate()
+                self._run_cmd(["git","clone", self.FIREBUG_REPO, fbugsrc])
 
             # Create the branch in case it doesn't exist. If it does git will
             # spit out an error message which we can ignore
-            self.log.debug("git branch " + GIT_BRANCH + " origin/" + GIT_BRANCH)
-            subprocess.Popen(["git","branch",GIT_BRANCH,"origin/"+GIT_BRANCH],
-                    cwd=fbugsrc).communicate()
+            self._run_cmd(["git","fetch","origin"], cwd=fbugsrc)
+            self._run_cmd(["git","branch",GIT_BRANCH,"origin/%s" % GIT_BRANCH], cwd=fbugsrc)
 
             # Because we may have added new tags we need to pull before we find
             # our specific revision
-            self.log.debug("git checkout " + GIT_BRANCH)
-            subprocess.Popen(["git","checkout",GIT_BRANCH], cwd=fbugsrc).communicate()
-            self.log.debug("git pull origin " + GIT_BRANCH)
-            subprocess.Popen(["git", "pull" , "origin", GIT_BRANCH],
-                    cwd=fbugsrc).communicate()
+            self._run_cmd(["git","checkout",GIT_BRANCH], cwd=fbugsrc)
+            self._run_cmd(["git","reset","--hard","origin/%s" % GIT_BRANCH], cwd=fbugsrc)
 
             # Check out the tag for the git repo - this assumes we always work
             # off tags, branches or specific commit hashes.
-            self.log.debug("git checkout " + GIT_TAG)
-            subprocess.Popen(["git", "checkout", GIT_TAG], cwd=fbugsrc).communicate()
+            self._run_cmd(["git", "checkout", GIT_TAG], cwd=fbugsrc)
 
             # If using HEAD as a tag we need the actual changeset
             if GIT_TAG.upper() == "HEAD":
-                GIT_TAG = subprocess.Popen(["git", "rev-parse", GIT_TAG],
-                            cwd=fbugsrc, stdout=subprocess.PIPE).communicate()[0].strip()
+                GIT_TAG = self._run_cmd(["git", "rev-parse", GIT_TAG],
+                            cwd=fbugsrc, stdout=subprocess.PIPE).strip()
 
             tags.append(GIT_TAG)
 
             # Localize testlist for the server
-            testlist = "http://" + ip + "/" + GIT_TAG + "/" + self.TESTLIST_LOCATION
+            testlist = "http://%s/%s/%s" % (ip, GIT_TAG, self.TESTLIST_LOCATION)
             test_bot.set(section, "TEST_LIST", testlist)
 
             if test_bot.has_option(section, "FIREBUG_XPI"):
                 FIREBUG_XPI = test_bot.get(section, "FIREBUG_XPI")
                 # Download the extensions
-                firebugPath = self.getRelativeURL(FIREBUG_XPI)
-                savePath = os.path.join(self.serverpath, firebugPath)
-                self.log.debug("Downloading Firebug XPI '" + FIREBUG_XPI + "' to '" + savePath + "'")
-                utils.download(FIREBUG_XPI, savePath)
+                firebug_path = self.getRelativeURL(FIREBUG_XPI)
+                save_path = os.path.join(self.serverpath, firebug_path)
+                self.log.debug("Downloading Firebug XPI '%s' to '%s'" % (FIREBUG_XPI, save_path)) 
+                utils.download(FIREBUG_XPI, save_path)
             else:
                 # build the extension from the source
                 # requires java and ant on the webserver
                 self.log.debug("Building Firebug extension from source")
-                cmd = ['ant']
-                self.log.debug('ant')
-                subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                                 cwd=os.path.join(fbugsrc, 'extension')).communicate()
+                self._run_cmd(['ant'], cwd=os.path.join(fbugsrc, 'extension'))
                 ext = os.path.join('extension', 'release')
-                firebugPath = os.path.join(GIT_TAG, ext,
+                firebug_path = os.path.join(GIT_TAG, ext,
                                 [f for f in os.listdir(os.path.join(fbugsrc, ext))
                                 if f.startswith('firebug') if f.find('amo') == -1 if f.endswith('.xpi')][0])
 
             if test_bot.has_option(section, 'FBTEST_XPI'):
                 FBTEST_XPI = test_bot.get(section, 'FBTEST_XPI')
-                fbtestPath = self.getRelativeURL(FBTEST_XPI)
-                savePath = os.path.join(self.serverpath, fbtestPath)
-                self.log.debug("Downloading FBTest XPI '" + FBTEST_XPI + "' to '" + savePath + "'")
-                utils.download(FBTEST_XPI, savePath)
+                fbtest_path = self.getRelativeURL(FBTEST_XPI)
+                save_path = os.path.join(self.serverpath, fbtest_path)
+                self.log.debug("Downloading FBTest XPI '%s' to '%s'" % (FBTEST_XPI, save_path)) 
+                utils.download(FBTEST_XPI, save_path)
             else:
                 # build the extension from the source
                 # requires java and ant on the webserver
                 self.log.debug("Building FBTest extension from source")
-                cmd = ['ant']
-                self.log.debug('ant')
-                subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                                 cwd=os.path.join(fbugsrc, 'tests', 'FBTest')).communicate()
+                self._run_cmd(['ant'], cwd=os.path.join(fbugsrc, 'tests', 'FBTest'))
                 ext = os.path.join('tests', 'FBTest', 'release')
-                fbtestPath = os.path.join(GIT_TAG, ext,
+                fbtest_path = os.path.join(GIT_TAG, ext,
                                 [f for f in os.listdir(os.path.join(fbugsrc, ext))
                                 if f.startswith('fbTest') if f.endswith('.xpi')][0])
 
             # Localize extensions for the server
-            FIREBUG_XPI = "http://" + ip + "/" + firebugPath
+            FIREBUG_XPI = "http://%s/%s" % (ip, firebug_path)
             test_bot.set(section, "FIREBUG_XPI", FIREBUG_XPI)
 
-            FBTEST_XPI = "http://" + ip + "/" + fbtestPath
+            FBTEST_XPI = "http://%s/%s" % (ip, fbtest_path)
             test_bot.set(section, "FBTEST_XPI", FBTEST_XPI)
 
             # Copy this to the serverpath
@@ -211,10 +200,10 @@ class FBUpdater:
                 # this is so we don't delete files that are currently being used in the middle of a test run
                 mtime = os.path.getmtime(path)
                 if time.time() - mtime > 24 * 60 * 60: # number of seconds in a day
-                    self.log.debug("Deleting unused changeset: " + path)
+                    self.log.debug("Deleting unused changeset: %s" % path)
                     shutil.rmtree(path)
 
-def main(argv):
+def main(argv=sys.argv[1:]):
     # Parse command line
     parser = optparse.OptionParser("%prog [options]")
     parser.add_option("-d", "--document-root", dest="serverpath",
@@ -247,7 +236,7 @@ def main(argv):
         except Exception as e:
             log.error(traceback.format_exc())
         if opt.waitTime != None:
-            log.info("Sleeping for " + str(opt.waitTime) + " hour" + ("s" if int(opt.waitTime) > 1 else ""))
+            log.info("Sleeping for %s hour%s" % (opt.waitTime, "s" if int(opt.waitTime) > 1 else ""))
             time.sleep(int(opt.waitTime) * 3600)
         else:
             break;
@@ -255,4 +244,4 @@ def main(argv):
 
 
 if __name__ == '__main__':
-    main(sys.argv[1:])
+    sys.exit(main())
