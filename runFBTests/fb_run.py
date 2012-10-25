@@ -69,6 +69,7 @@ class FBRunner:
         self.testlist = kwargs.get('testlist')
         self.couchURI = kwargs.get('couchURI')
         self.databasename = kwargs.get('databasename')
+        self.section = kwargs.get('section')
         self.platform = platform.system().lower()
 
         # Read in fb-test-runner.config for local configuration
@@ -83,15 +84,6 @@ class FBRunner:
         # Get the platform independent app directory and version
         self.appdir, self.appVersion = self.get_app_info()
 
-        # Make sure we have a firebug version
-        if not self.version:
-            try:
-                self.version = localConfig.get("version_map", self.appVersion)
-            except NoOptionError:
-                self.version = localConfig.get("version_map", "default")
-                self.log.warning("Could not find an appropriate version of Firebug to use, using Firebug " + self.version)
-        self.section = "Firebug" + self.version
-
         # Read in the Firebug team's config file
         try:
             self.download(self.serverpath + self.REMOTE_CONFIG, "test-bot.config")
@@ -102,11 +94,19 @@ class FBRunner:
         self.config = ConfigParser()
         self.config.read("test-bot.config")
 
+        # Make sure we have a firebug version
+        if not self.version:
+            try:
+                self.version = self.config.get(self.section, "VERSION")
+            except Exception:
+                self.version = localConfig.get("version_map", "default")
+                self.log.warning("Could not find an appropriate version of Firebug to use, using Firebug " + self.version)
+
         # Make sure we have a testlist
         if not self.testlist:
             try:
                 self.testlist = self.config.get(self.section, "TEST_LIST")
-            except Exception, e:
+            except Exception:
                 self.log.error("No testlist specified in config file")
                 raise
 
@@ -125,7 +125,7 @@ class FBRunner:
                 if os.path.exists(tmpFile):
                     self.log.debug("Removing " + tmpFile)
                     os.remove(tmpFile)
-        except Exception, e:
+        except Exception:
             self.log.warn("Could not clean up temporary files")
             self.log.warn(traceback.format_exc())
 
@@ -178,7 +178,7 @@ class FBRunner:
             prefs = open(os.path.join(self.profile, "prefs.js"), "a")
             prefs.write("user_pref(\"extensions.checkCompatibility." + self.appVersion + "\", false);\n")
             prefs.close()
-        except Exception, e:
+        except Exception:
             self.log.warn("Could not disable compatibility check")
             self.log.warn(traceback.format_exc())
 
@@ -236,7 +236,7 @@ class FBRunner:
 
             self.log.debug("Running '" + self.binary + " -no-remote -runFBTests " + self.testlist + "'")
             mozRunner.start()
-        except Exception, e:
+        except Exception:
             self.log.error("Could not start Firefox")
             self.log.error(traceback.format_exc())
             self.cleanup()
@@ -259,7 +259,7 @@ class FBRunner:
             self.log.info("This usually indicates the FBTest extension was not started")
             try:
                 logfile = utils.create_log(self.profile, self.appdir, self.testlist)
-            except Exception, e:
+            except Exception:
                 self.log.error("Could not synthesize a log file")
                 self.log.error(traceback.format_exc())
                 self.cleanup()
@@ -303,7 +303,7 @@ class FBRunner:
         try:
             fb_logs.main(["--log", filename, "--database", self.databasename, "--couch", self.couchURI,
                              "--changeset", utils.get_changeset(self.appdir)])
-        except Exception, e:
+        except Exception:
             self.log.error("Log file not sent to couchdb at server: '" + self.couchURI + "' and database: '" + self.databasename)
             self.log.error(traceback.format_exc())
 
