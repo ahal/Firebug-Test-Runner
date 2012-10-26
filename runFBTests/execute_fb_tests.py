@@ -62,7 +62,6 @@ class FBWrapper:
         self.binary = kwargs.get("binary")
         self.profile = kwargs.get("profile")
         self.serverpath = kwargs.get("serverpath")
-        self.version = kwargs.get("version")
         self.couchURI = kwargs.get("couchURI")
         self.databasename = kwargs.get("databasename")
         self.testlist = kwargs.get("testlist")
@@ -113,7 +112,7 @@ class FBWrapper:
         """
         Start the tests by invoking fb_run
         """
-        runner = fb_run.FBRunner(binary=self.binary, profile=self.profile, serverpath=self.serverpath, version=self.version, debug=self.debug,
+        runner = fb_run.FBRunner(binary=self.binary, profile=self.profile, serverpath=self.serverpath, debug=self.debug,
                                                         section=section, couchURI=self.couchURI, databasename=self.databasename, testlist=self.testlist)
         runner.run()
 
@@ -202,7 +201,6 @@ class FBWrapper:
 
                 for section in config.sections():
                     try:
-                        version = config.get(section, "VERSION")
                         if not self.testlist:
                             self.testlist = config.get(section, "TEST_LIST")
                         if not self.binary:
@@ -215,7 +213,7 @@ class FBWrapper:
                     self.log.info("Starting builds and FBTests for %s" % section)
                     # Run the build(s)
                     if not self.binary:
-                        ret = self.prepare_builds(version, builds)
+                        ret = self.prepare_builds(section, builds)
                         if ret != 0:
                             self.log.error(ret)
                     else:
@@ -256,9 +254,6 @@ def cli(argv=sys.argv[1:]):
                       default="https://getfirebug.com",
                       help="The http server containing the firebug tests")
 
-    parser.add_option("-v", "--version", dest="version",
-                      help="The firebug version to run")
-
     parser.add_option("-c", "--couch", dest="couchURI",
                       default="http://localhost:5984",
                       help="URI to couchdb server for log information")
@@ -278,8 +273,8 @@ def cli(argv=sys.argv[1:]):
                       help="Enable debug logging")
     (opt, remainder) = parser.parse_args(argv)
 
-    wrapper = FBWrapper(binary=opt.binary, profile=opt.profile, serverpath=opt.serverpath, version=opt.version,
-                        couchURI=opt.couchURI, databasename=opt.databasename, testlist=opt.testlist, waitTime=opt.waitTime, debug=opt.debug)
+    wrapper = FBWrapper(binary=opt.binary, profile=opt.profile, serverpath=opt.serverpath, couchURI=opt.couchURI,
+                        databasename=opt.databasename, testlist=opt.testlist, waitTime=opt.waitTime, debug=opt.debug)
     wrapper.run()
 
 if __name__ == '__main__':

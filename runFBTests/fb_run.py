@@ -65,7 +65,6 @@ class FBRunner:
         self.binary = kwargs.get('binary')
         self.profile = kwargs.get('profile')
         self.serverpath = kwargs.get('serverpath')
-        self.version = kwargs.get('version')
         self.testlist = kwargs.get('testlist')
         self.couchURI = kwargs.get('couchURI')
         self.databasename = kwargs.get('databasename')
@@ -93,14 +92,6 @@ class FBRunner:
             raise
         self.config = ConfigParser()
         self.config.read("test-bot.config")
-
-        # Make sure we have a firebug version
-        if not self.version:
-            try:
-                self.version = self.config.get(self.section, "VERSION")
-            except Exception:
-                self.version = localConfig.get("version_map", "default")
-                self.log.warning("Could not find an appropriate version of Firebug to use, using Firebug " + self.version)
 
         # Make sure we have a testlist
         if not self.testlist:
@@ -325,9 +316,6 @@ def cli(argv=sys.argv[1:]):
     parser.add_option("-s", "--serverpath", dest="serverpath",
                       help="The http server containing the Firebug tests")
 
-    parser.add_option("-v", "--version", dest="version",
-                      help="The firebug version to run")
-
     parser.add_option("-t", "--testlist", dest="testlist",
                       help="Name of the testlist to use, should usually use the default")
 
@@ -349,7 +337,7 @@ def cli(argv=sys.argv[1:]):
 
     try:
         runner = FBRunner(binary=opt.binary, profile=opt.profile, serverpath=opt.serverpath,
-                                    version=opt.version, testlist=opt.testlist, log=opt.log, debug=opt.debug)
+                                    testlist=opt.testlist, log=opt.log, debug=opt.debug)
         runner.run()
     except Exception:
         return -1
