@@ -137,7 +137,10 @@ class FBUpdater:
             tags.append(GIT_TAG)
 
             # Localize testlist for the server
-            testlist = "http://%s/%s/%s" % (ip, GIT_TAG, self.TESTLIST_LOCATION)
+            if test_bot.has_option(section, "TEST_LIST"):
+                testlist = test_bot.get(section, "TEST_LIST")
+            else:
+                testlist = "http://%s/%s/%s" % (ip, GIT_TAG, self.TESTLIST_LOCATION)
             test_bot.set(section, "TEST_LIST", testlist)
 
             if test_bot.has_option(section, "FIREBUG_XPI"):
