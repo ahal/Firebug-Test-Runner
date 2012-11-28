@@ -66,6 +66,10 @@ def main(argv):
                       default='unspecified',
                       help='changeset of build the test was run against.')
 
+    parser.add_option('--section', action='store', type='string',
+                      dest='section', default='unspecified',
+                      help='section title of the test run')
+
     (options, args) = parser.parse_args(argv)
 
     platform = dirtyutils.get_platform()
@@ -104,6 +108,7 @@ def main(argv):
                     #print 'test: meta: %s=%s' % (match.group(1), match.group(2))
                     testheaderdoc[match.group(1)] = match.group(2)
                     testheaderdoc["App Changeset"] = options.changeset
+                    testheaderdoc["Section Title"] = options.section
                     testheaderdoc["CPU Architecture"] = platform["cpu"]
                     testheaderdoc["OS Detailed Name"] = platform["version"]
                     if not "OS Name" in testheaderdoc:

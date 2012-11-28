@@ -293,7 +293,7 @@ class FBRunner:
         self.log.info("Sending log file to couchdb at '" + self.couchURI + "'")
         try:
             fb_logs.main(["--log", filename, "--database", self.databasename, "--couch", self.couchURI,
-                             "--changeset", utils.get_changeset(self.appdir)])
+                             "--changeset", utils.get_changeset(self.appdir), "--section", self.section])
         except Exception:
             self.log.error("Log file not sent to couchdb at server: '" + self.couchURI + "' and database: '" + self.databasename)
             self.log.error(traceback.format_exc())
